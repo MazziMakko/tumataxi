@@ -1,0 +1,165 @@
+🔒 ABSOLUTE CONSTRAINTS (NON-NEGOTIABLE)
+
+1. RULIAL MATHEMATICS IS LAW
+
+All financial and state logic is deterministic
+
+No floating ambiguity
+
+No recalculation without ledger mutation
+
+Every economic or state change → append-only ledger entry
+
+One authoritative computation path only
+
+
+
+---
+
+2. APPEND-ONLY BACKEND
+
+No destructive updates to financial or state data
+
+State transitions are events
+
+History is immutable
+
+Current state is derived, never overwritten
+
+
+
+---
+
+3. SECURITY BY DESIGN
+
+Zero-trust assumptions
+
+No client-side authority over money or status
+
+Secrets never exposed
+
+Database isolated from public internet
+
+Minimal attack surface
+
+No unnecessary dependencies
+
+
+
+---
+
+4. LESS CODE > MORE CODE
+
+Fewer abstractions
+
+Fewer services
+
+Fewer dependencies
+
+Every line must justify its existence
+
+Elegance = survivability
+
+Billionaire greedy ecosystem = no dollar can leak out the system , webhooks and payment gateways are linked and security tight. Works everytime.
+
+
+
+---
+
+5. VISUALLY-TRIGGERED FRONTEND
+
+Must Have triggering unique Branded loading screens 
+
+UI must pull correct behavior
+
+Zero learning curve
+
+Familiar patterns, cleaner execution
+
+Designed for instinctive use under pressure
+
+Optimized for low bandwidth and older devices where applicable
+
+
+
+---
+
+🧠 PRODUCT IDENTITY (VARIABLE)
+
+PRODUCT NAME: {{PRODUCT_NAME}}
+COMPANY: {{COMPANY_NAME}}
+DOMAIN: {{DOMAIN}}
+MARKET / REGION: {{PRIMARY_MARKET}}
+INCUMBENT / COMPETITOR: {{INCUMBENT_TO_BEAT}}
+
+MISSION:
+Build Sovereign Digital Infrastructure that:
+
+Operates reliably under real-world constraints
+
+Pays users or stakeholders fairly
+
+Locks in loyalty through earned advantage, not coercion
+
+Converts activity into cash flow immediately
+
+
+
+---
+
+🧩 TECH STACK (DEFAULT — ADJUST ONLY IF REQUIRED)
+
+Frontend: Next.js 14 (App Router), PWA, TailwindCSS
+
+Backend: Next.js API Routes
+
+Database: PostgreSQL (Supabase-compatible)
+
+ORM: Prisma
+
+Hosting: Sovereign VPS (Dockerized)
+
+Currency: {{LOCAL_CURRENCY}}
+
+Timezone: {{LOCAL_TIMEZONE}}
+
+
+
+---
+
+🧱 CORE DOMAIN MODEL (GENERATE FIRST)
+
+Design and implement a Prisma schema with:
+
+Immutable Core Concepts
+
+User (ROLE-BASED)
+
+Profile (role-specific operational state)
+
+Primary Transactional Object (orders, rides, jobs, tasks, contracts, etc.)
+
+RulialLedger (append-only, immutable)
+
+
+
+---
+
+ENFORCED STATE MACHINE
+
+Define an explicit, linear state flow for the primary object.
+
+No skipping states
+
+No rollback
+
+No mutation without event
+
+Every transition → ledger entry
+
+
+State changes must be provable and auditable.
+
+
+---
+

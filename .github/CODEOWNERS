@@ -1,0 +1,18 @@
+# Default owners for everything
+* @MazziMakko
+
+# Financial/Ledger code
+/src/lib/rulial/ @MazziMakko
+/prisma/schema.prisma @MazziMakko
+
+# API Routes
+/src/pages/api/ @MazziMakko
+
+# Security-sensitive files
+/.env* @MazziMakko
+/docker-compose.yml @MazziMakko
+/nginx.conf @MazziMakko
+
+# Documentation
+*.md @MazziMakko
+/docs/ @MazziMakko

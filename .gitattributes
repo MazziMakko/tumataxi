@@ -1,0 +1,39 @@
+# Auto normalize line endings to LF on commit
+* text=auto
+
+# Source code
+*.js eol=lf
+*.jsx eol=lf
+*.ts eol=lf
+*.tsx eol=lf
+*.json eol=lf
+*.jsonc eol=lf
+*.prisma eol=lf
+*.sql eol=lf
+*.md eol=lf
+*.sh eol=lf
+*.bash eol=lf
+
+# Batch files
+*.bat eol=crlf
+*.cmd eol=crlf
+
+# Windows
+*.ps1 eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.otf binary
+*.db binary
+*.sqlite binary

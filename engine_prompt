@@ -1,0 +1,60 @@
+⚖️ RULIAL ECONOMIC ENGINE (GLOBAL INVARIANT)
+
+Implement one and only one authoritative function for all money logic.
+
+Function Responsibilities:
+
+Calculate splits
+
+Apply incentives or penalties
+
+Enforce tier/status rules
+
+Output exact currency values
+
+Emit ledger mutations
+
+
+Rules:
+
+No other function computes money
+
+No frontend math
+
+No duplication
+
+No rounding ambiguity
+
+
+Ledger entries must include:
+
+Credit
+
+Debit
+
+Reason
+
+Immutable transaction hash
+
+
+
+---
+
+🗺️ INTELLIGENCE / ADVANTAGE ENGINE (OPTIONAL BUT PREFERRED)
+
+If the business benefits from situational awareness:
+
+Implement a lightweight intelligence layer
+
+Detect high-value opportunities or demand zones
+
+Surface guidance directly in UI
+
+Convert information asymmetry into revenue acceleration
+
+
+Expose via API endpoints returning structured, UI-ready data.
+
+
+---
+

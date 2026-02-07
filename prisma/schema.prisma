@@ -1,0 +1,401 @@
+// Tuma Taxi - Mozambique Ride-Hailing Platform
+// ORM: Prisma | Database: PostgreSQL (Supabase)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CORE ENUMS - Mozambique Edition
+// ============================================================================
+
+enum UserRole {
+  DRIVER
+  RIDER
+  ADMIN
+}
+
+enum DriverTier {
+  BRONZE  // Default: 17% commission
+  SILVER  // 50+ rides/week OR 4.8+ rating: 15% commission
+  GOLD    // 100+ rides/week OR 4.9+ rating: 12% + instant payout
+}
+
+enum RideStatus {
+  REQUESTED      // Rider requests a ride
+  MATCHED        // Driver matched to ride
+  ARRIVED        // Driver arrived at pickup
+  IN_PROGRESS    // Ride active/in transit
+  COMPLETED      // Ride finished
+  CANCELLED      // Ride cancelled
+}
+
+enum VehicleType {
+  CHAPAS   // Shared minibus - popular in Mozambique
+  TAXI     // Standard taxi (metered/negotiated)
+  PRIVATE  // Private vehicle
+}
+
+enum LedgerType {
+  CREDIT
+  DEBIT
+}
+
+enum LedgerReason {
+  RIDE_PAYOUT     // Driver payout from completed ride
+  COMMISSION      // Platform commission taken
+  BONUS           // Incentive bonus
+  REFUND          // Refund to rider
+  WITHDRAWAL      // Driver cash withdrawal
+  SYSTEM_ADJUST   // Administrative adjustment
+}
+
+// ============================================================================
+// USER MODELS
+// ============================================================================
+
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  phoneNumber         String   @unique
+  firstName           String
+  lastName            String
+  role                UserRole
+  profileImageUrl     String?
+  
+  // Authentication
+  passwordHash        String
+  emailVerified       Boolean  @default(false)
+  phoneVerified       Boolean  @default(false)
+  
+  // Localization (Mozambique)
+  locale              String   @default("pt-MZ")
+  timezone            String   @default("Africa/Maputo")
+  
+  // Status
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  // Relations
+  driverProfile       DriverProfile?
+  ridesAsDriver       Ride[]   @relation("DriverRides")
+  ridesAsRider        Ride[]   @relation("RiderRides")
+  ledgerEntries       RulialLedger[]
+  ratings             Rating[]
+  
+  // MAKKO INTELLIGENCE: Emergency & Security Relations
+  emergencyIncidents  EmergencyIncident[]
+  emergencyContacts   EmergencyContact[]
+  rideDeclines        RideDecline[]
+}
+
+model DriverProfile {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Tier & Reputation (Rulial Logic)
+  currentTier         DriverTier @default(BRONZE)
+  rating              Float   @default(5.0)
+  totalRidesCompleted Int     @default(0)
+  weeklyRidesCompleted Int    @default(0)
+  lastWeekReset       DateTime @default(now())
+  
+  // Vehicle Information
+  vehicleType         VehicleType @default(TAXI)
+  licensePlate        String
+  vehicleModel        String
+  vehicleYear         Int
+  vehicleColor        String
+  
+  // Financial
+  walletBalanceMZN    Decimal @default(0) @db.Decimal(12, 2)
+  lifetimeEarningsMZN Decimal @default(0) @db.Decimal(12, 2)
+  
+  // Online Status
+  isOnline            Boolean @default(false)
+  lastOnlineAt        DateTime?
+  
+  // Location (for matching)
+  currentLatitude     Float?
+  currentLongitude    Float?
+  lastLocationUpdate  DateTime?
+  
+  // Compliance
+  verificationStatus  String  @default("PENDING") // PENDING | APPROVED | REJECTED
+  documentUrls        String[]
+  backgroundCheckAt   DateTime?
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([currentTier])
+  @@index([isOnline])
+  @@index([rating])
+}
+
+// ============================================================================
+// RIDE MODELS
+// ============================================================================
+
+model Ride {
+  id                  String   @id @default(cuid())
+  
+  // Participants
+  driverId            String
+  driver              User     @relation("DriverRides", fields: [driverId], references: [id])
+  riderId             String
+  rider               User     @relation("RiderRides", fields: [riderId], references: [id])
+  
+  // Status
+  status              RideStatus @default(REQUESTED)
+  
+  // Pickup & Dropoff (Geographic)
+  pickupLatitude      Float
+  pickupLongitude     Float
+  pickupAddress       String
+  
+  dropoffLatitude     Float
+  dropoffLongitude    Float
+  dropoffAddress      String
+  
+  // Distance & Duration
+  estimatedDistanceKm Decimal @db.Decimal(6, 2)
+  actualDistanceKm    Decimal? @db.Decimal(6, 2)
+  estimatedDurationMin Int
+  actualDurationMin   Int?
+  
+  // Financial (All in MZN - Mozambican Metical)
+  baseFareMZN         Decimal @db.Decimal(10, 2)
+  surgeMultiplier     Decimal @default(1.0) @db.Decimal(3, 2)
+  finalFareMZN        Decimal @db.Decimal(10, 2)
+  commissionRate      Float   @default(17.0)  // Applied by Rulial Logic
+  commissionMZN       Decimal @db.Decimal(10, 2)
+  driverPayoutMZN     Decimal @db.Decimal(10, 2)
+  
+  // Timestamps
+  requestedAt         DateTime @default(now())
+  matchedAt           DateTime?
+  arrivedAt           DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  
+  // Optional
+  notes               String?
+  cancelReason        String?
+  
+  // Payment & Ledger
+  riderPaymentStatus  String  @default("PENDING") // PENDING | COMPLETED | FAILED
+  ledgerIds           String[]
+  
+  // MAKKO INTELLIGENCE: Security Relations
+  declines            RideDecline[]
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([driverId])
+  @@index([riderId])
+  @@index([status])
+  @@index([completedAt])
+  
+  @@unique([id, driverId, riderId])
+}
+
+// ============================================================================
+// RULIAL LEDGER - Deterministic Financial State
+// ============================================================================
+
+model RulialLedger {
+  id                  String   @id @default(cuid())
+  
+  // Account
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Transaction Details
+  type                LedgerType
+  reason              LedgerReason
+  amountMZN           Decimal @db.Decimal(10, 2)
+  
+  // Reference (Immutable)
+  txHash              String  @unique  // Immutable transaction hash
+  rideId              String?
+  
+  // Metadata
+  description         String?
+  metadata            String? // JSON metadata for complex transactions
+  
+  // Balance State (Snapshot)
+  balanceBeforeMZN    Decimal @db.Decimal(12, 2)
+  balanceAfterMZN     Decimal @db.Decimal(12, 2)
+  
+  // Ledger Integrity
+  isVerified          Boolean @default(true)
+  verifiedAt          DateTime @default(now())
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([reason])
+  @@index([createdAt])
+  @@index([txHash])
+}
+
+// ============================================================================
+// RATING & FEEDBACK
+// ============================================================================
+
+model Rating {
+  id                  String   @id @default(cuid())
+  
+  // Rater (always rider in this case)
+  raterId             String
+  rater               User     @relation(fields: [raterId], references: [id], onDelete: Cascade)
+  
+  // Ratee (driver)
+  driverId            String
+  
+  // Rating Details
+  score               Float    // 1.0 to 5.0
+  comment             String?
+  
+  // Categories
+  driverBehavior      Float?   // 1.0 to 5.0
+  vehicleCondition    Float?   // 1.0 to 5.0
+  cleanliness         Float?   // 1.0 to 5.0
+  safetyCompliance    Float?   // 1.0 to 5.0
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@index([driverId])
+  @@index([raterId])
+  @@unique([id, raterId, driverId])
+}
+
+// ============================================================================
+// PROMOTIONAL & INCENTIVES
+// ============================================================================
+
+model PromotionalBonus {
+  id                  String   @id @default(cuid())
+  
+  name                String
+  description         String?
+  
+  // Bonus Criteria
+  minRidesRequired    Int?
+  minRatingRequired   Float?
+  targetTiers         DriverTier[]
+  
+  // Reward (in MZN)
+  bonusAmountMZN      Decimal @db.Decimal(10, 2)
+  
+  // Period
+  startDate           DateTime
+  endDate             DateTime
+  isActive            Boolean @default(true)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+// ============================================================================
+// MAKKO INTELLIGENCE: EMERGENCY & SECURITY MODELS
+// ============================================================================
+
+model EmergencyIncident {
+  id                  String   @id @default(cuid())
+  driverId            String
+  driver              User     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  
+  type                String   // SOS_ACTIVATED, ACCIDENT, MEDICAL, SECURITY_THREAT
+  status              String   // ACTIVE, NOTIFICATIONS_SENT, EVIDENCE_COLLECTED, RESOLVED, CLOSED
+  
+  location            Json     // { latitude, longitude, accuracy, timestamp, address }
+  reportedAt          DateTime
+  resolvedAt          DateTime?
+  
+  // Evidence and notifications
+  hasAudioEvidence    Boolean  @default(false)
+  hasVideoEvidence    Boolean  @default(false)
+  notificationsSent   Boolean  @default(false)
+  notificationsSentAt DateTime?
+  
+  // Response tracking
+  responseTeamId      String?
+  estimatedArrival    DateTime?
+  actualArrival       DateTime?
+  
+  // Related records
+  evidence            EmergencyEvidence[]
+  
+  metadata            Json     @default("{}")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@map("emergency_incidents")
+}
+
+model EmergencyEvidence {
+  id                  String            @id @default(cuid())
+  incidentId          String
+  incident            EmergencyIncident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  
+  type                String            // AUDIO, VIDEO, PHOTO, TEXT, LOCATION
+  filename            String
+  originalFilename    String
+  fileSize            Int
+  mimeType            String
+  
+  // Cloud storage
+  storageUrl          String
+  storageKey          String
+  
+  uploadedAt          DateTime
+  metadata            Json              @default("{}")
+  
+  @@map("emergency_evidence")
+}
+
+model RideDecline {
+  id                  String   @id @default(cuid())
+  rideId              String
+  ride                Ride     @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  
+  driverId            String
+  driver              User     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  
+  reason              String   // driver_declined, too_far, traffic, personal, other
+  declinedAt          DateTime
+  
+  metadata            Json     @default("{}")
+  createdAt           DateTime @default(now())
+  
+  @@map("ride_declines")
+}
+
+model EmergencyContact {
+  id                  String   @id @default(cuid())
+  driverId            String
+  driver              User     @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  
+  name                String
+  phone               String
+  relationship        String   // family, friend, colleague, other
+  isPrimary           Boolean  @default(false)
+  
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  @@map("emergency_contacts")
+}
