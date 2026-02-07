@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   title: 'Tuma Taxi - Driver App',
   description: 'Professional ride-hailing for Mozambican drivers. Fast, reliable, profitable.',
   icons: {
-    icon: '/favicon.ico',
+    icon: '/tumataxi-logo.svg',
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -27,6 +27,8 @@ export const viewport: Viewport = {
   themeColor: '#000000',
 };
 
+import ErrorBoundary from '@/components/ErrorBoundary';
+
 export default function RootLayout({
   children,
 }: {
@@ -39,10 +41,14 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Tuma Taxi" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/tumataxi-logo.svg" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
-      <body className="bg-black text-white antialiased">{children}</body>
+      <body className="bg-black text-white antialiased">
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+      </body>
     </html>
   );
 }

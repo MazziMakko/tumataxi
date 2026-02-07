@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import ClientOnly from './ClientOnly';
+import LoadingScreen from './LoadingScreen';
+import DebugInfo from './DebugInfo';
 import DriverWorkflow from './DriverWorkflow';
 
 /**
@@ -9,5 +12,12 @@ import DriverWorkflow from './DriverWorkflow';
  * Includes waiting timer, SOS shield, sidebar navigation, and smooth animations
  */
 export default function DriverApp() {
-  return <DriverWorkflow />;
+  return (
+    <>
+      <DebugInfo />
+      <ClientOnly fallback={<LoadingScreen />}>
+        <DriverWorkflow />
+      </ClientOnly>
+    </>
+  );
 }
