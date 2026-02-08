@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 /**
  * ErrorLogger - Captures and logs client-side errors for debugging
