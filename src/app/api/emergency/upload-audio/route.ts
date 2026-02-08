@@ -8,6 +8,17 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if database is available
+    if (!prisma) {
+      return NextResponse.json(
+        { 
+          error: 'Database not configured',
+          message: 'This endpoint requires database configuration'
+        },
+        { status: 503 }
+      );
+    }
+
     const formData = await request.formData();
     const audioFile = formData.get('audio') as File;
     const driverId = formData.get('driverId') as string;

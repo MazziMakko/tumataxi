@@ -5,7 +5,9 @@ export const metadata: Metadata = {
   title: 'Tuma Taxi - Driver App',
   description: 'Professional ride-hailing for Mozambican drivers. Fast, reliable, profitable.',
   icons: {
-    icon: '/tumataxi-logo.svg',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
   },
   manifest: '/manifest.json',
   appleWebApp: {
@@ -41,7 +43,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Tuma Taxi" />
-        <link rel="apple-touch-icon" href="/tumataxi-logo.svg" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="manifest" href="/manifest.json" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="bg-black text-white antialiased">
