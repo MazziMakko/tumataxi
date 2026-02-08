@@ -9,9 +9,6 @@ import { createServerClient } from '@supabase/ssr';
 // Role from Supabase user metadata (set during signup/onboarding)
 type AppRole = 'DRIVER' | 'PASSENGER' | 'RIDER' | 'ADMIN';
 
-// Public routes - no auth required
-const AUTH_ROUTES = ['/login', '/signup'];
-
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
@@ -38,18 +35,16 @@ export async function middleware(request: NextRequest) {
 
   const isDriverRoute = pathname.startsWith('/driver');
   const isRideRoute = pathname.startsWith('/ride');
-  const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
-  const isAuthCallback = pathname.startsWith('/auth/');
+  const isAuthRoute = pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup');
+  const isAuthCallback = pathname.startsWith('/auth/callback');
 
-  // Get role from user metadata (stored during signup)
+  // Get role from user metadata (set during signup, verified by DB in server action)
   const role = (user?.user_metadata?.role as AppRole) ?? (user?.app_metadata?.role as AppRole);
 
-  // Not logged in
+  // Not logged in - protect /driver/* and /ride/*
   if (!user) {
     if (isDriverRoute || isRideRoute) {
-      const redirect = new URL('/login', request.url);
-      redirect.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(redirect);
+      return NextResponse.redirect(new URL('/', request.url));
     }
     if (isAuthCallback) return supabaseResponse;
     return supabaseResponse;
@@ -70,6 +65,12 @@ export async function middleware(request: NextRequest) {
 
   // Redirect from auth pages if already logged in
   if (isAuthRoute) {
+    const redirectTo = role === 'DRIVER' ? '/driver/dashboard' : '/ride/map';
+    return NextResponse.redirect(new URL(redirectTo, request.url));
+  }
+
+  // Logged-in users on landing page -> redirect to their app
+  if (pathname === '/' && (role === 'DRIVER' || role === 'ADMIN' || role === 'PASSENGER' || role === 'RIDER')) {
     const redirectTo = role === 'DRIVER' ? '/driver/dashboard' : '/ride/map';
     return NextResponse.redirect(new URL(redirectTo, request.url));
   }

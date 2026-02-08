@@ -21,7 +21,7 @@ export default function DriverDashboardPage() {
       const supabase = createClient();
       const { data: { user: u } } = await supabase.auth.getUser();
       if (!u) {
-        router.push('/login');
+        router.push('/');
         return;
       }
       setUser(u);
