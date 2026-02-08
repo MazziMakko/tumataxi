@@ -882,7 +882,7 @@ export const useDriverStore = create<DriverStoreState>()(
         licenseDocumentUrl: state.licenseDocumentUrl,
         profilePhotoUrl: state.profilePhotoUrl,
       }),
-      onRehydrateStorage: () => (state, error) => {
+      onRehydrateStorage: () => (_state, error) => {
         if (error) {
           console.error('Zustand rehydration error:', error);
           // Reset to initial state on error
