@@ -1,0 +1,3 @@
+-- TumaTaxi: If you get cross-schema errors, run drop-auth-ref-tables.sql first:
+--   npx prisma db execute --file prisma/drop-auth-ref-tables.sql
+-- Then: npx prisma db push --accept-data-loss

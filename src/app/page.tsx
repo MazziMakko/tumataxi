@@ -1,15 +1,19 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
 
-import DriverApp from '@/components/DriverApp';
-import SimpleTest from '@/components/SimpleTest';
+export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  // Debug mode: Set to true to show simple test, false for full app
-  const debugMode = false;
-  
-  if (debugMode) {
-    return <SimpleTest />;
+export default async function HomePage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
   }
-  
-  return <DriverApp />;
+
+  const role = user.user_metadata?.role ?? user.app_metadata?.role;
+  if (role === 'DRIVER') {
+    redirect('/driver/dashboard');
+  }
+  redirect('/ride/map');
 }

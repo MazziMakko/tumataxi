@@ -10,13 +10,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 // ============================================================================
 // CORE ENUMS - Mozambique Edition
 // ============================================================================
 
 enum UserRole {
   DRIVER
-  RIDER
+  RIDER    // Alias for PASSENGER (legacy)
+  PASSENGER
   ADMIN
 }
 
@@ -39,6 +41,9 @@ enum VehicleType {
   CHAPAS   // Shared minibus - popular in Mozambique
   TAXI     // Standard taxi (metered/negotiated)
   PRIVATE  // Private vehicle
+  BODA     // Motorcycle (Yango Pro style)
+  ECONOMY  // Budget ride
+  COMFORT  // Premium ride
 }
 
 enum LedgerType {
@@ -61,15 +66,16 @@ enum LedgerReason {
 
 model User {
   id                  String   @id @default(cuid())
+  authId              String?  @unique  // Supabase auth.users.id (uuid)
   email               String   @unique
-  phoneNumber         String   @unique
+  phoneNumber         String?  @unique  // Optional until onboarding
   firstName           String
   lastName            String
   role                UserRole
   profileImageUrl     String?
   
-  // Authentication
-  passwordHash        String
+  // Authentication (legacy - Supabase Auth preferred)
+  passwordHash        String?  // Nullable for Supabase-only users
   emailVerified       Boolean  @default(false)
   phoneVerified       Boolean  @default(false)
   
@@ -109,6 +115,7 @@ model DriverProfile {
   
   // Vehicle Information
   vehicleType         VehicleType @default(TAXI)
+  vehicleMake         String?   // e.g. Toyota (onboarding Step 2)
   licensePlate        String
   vehicleModel        String
   vehicleYear         Int
@@ -130,6 +137,10 @@ model DriverProfile {
   // Compliance
   verificationStatus  String  @default("PENDING") // PENDING | APPROVED | REJECTED
   documentUrls        String[]
+  licenseFrontUrl     String?  // Supabase Storage: driver-docs
+  licenseBackUrl      String?
+  insuranceUrl        String?
+  vehicleRegistrationUrl String?
   backgroundCheckAt   DateTime?
   
   createdAt           DateTime @default(now())
@@ -155,6 +166,7 @@ model Ride {
   
   // Status
   status              RideStatus @default(REQUESTED)
+  rideType            VehicleType? @default(TAXI)  // ECONOMY | COMFORT | BODA
   
   // Pickup & Dropoff (Geographic)
   pickupLatitude      Float
@@ -304,7 +316,7 @@ model PromotionalBonus {
   startDate           DateTime
   endDate             DateTime
   isActive            Boolean @default(true)
-  
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 }

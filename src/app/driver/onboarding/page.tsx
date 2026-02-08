@@ -1,0 +1,244 @@
+'use client';
+
+import { useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+
+const STEPS = [
+  { id: 1, title: 'Informação Pessoal' },
+  { id: 2, title: 'Dados do Veículo' },
+  { id: 3, title: 'Documentos' },
+];
+
+export default function DriverOnboardingPage() {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    // Step 1
+    firstName: '',
+    lastName: '',
+    phone: '',
+    // Step 2
+    vehicleMake: '',
+    vehicleModel: '',
+    vehicleYear: '',
+    licensePlate: '',
+    vehicleColor: '',
+    vehicleType: 'TAXI' as const,
+    // Step 3
+    licenseFront: null as File | null,
+    licenseBack: null as File | null,
+    insurance: null as File | null,
+    registration: null as File | null,
+  });
+
+  const router = useRouter();
+  const supabase = createClient();
+
+  async function uploadDoc(file: File, path: string) {
+    const { data, error } = await supabase.storage
+      .from('driver-docs')
+      .upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('driver-docs').getPublicUrl(data.path);
+    return urlData.publicUrl;
+  }
+
+  async function handleSubmit() {
+    setLoading(true);
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('Not authenticated');
+
+      let licenseFrontUrl = '';
+      let licenseBackUrl = '';
+      let insuranceUrl = '';
+      let vehicleRegistrationUrl = '';
+
+      if (form.licenseFront) {
+        licenseFrontUrl = await uploadDoc(form.licenseFront, `${user.id}/license-front`);
+      }
+      if (form.licenseBack) {
+        licenseBackUrl = await uploadDoc(form.licenseBack, `${user.id}/license-back`);
+      }
+      if (form.insurance) {
+        insuranceUrl = await uploadDoc(form.insurance, `${user.id}/insurance`);
+      }
+      if (form.registration) {
+        vehicleRegistrationUrl = await uploadDoc(form.registration, `${user.id}/registration`);
+      }
+
+      const res = await fetch('/api/driver/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          authId: user.id,
+          email: user.email,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          phone: form.phone,
+          vehicleMake: form.vehicleMake,
+          vehicleModel: form.vehicleModel,
+          vehicleYear: parseInt(form.vehicleYear) || 2020,
+          licensePlate: form.licensePlate,
+          vehicleColor: form.vehicleColor,
+          vehicleType: form.vehicleType,
+          licenseFrontUrl,
+          licenseBackUrl,
+          insuranceUrl,
+          vehicleRegistrationUrl,
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      router.push('/driver/dashboard');
+      router.refresh();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao submeter. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white p-6">
+      <div className="max-w-lg mx-auto">
+        <h1 className="text-2xl font-bold mb-2">Registo de Motorista</h1>
+        <p className="text-gray-400 mb-8">Complete os 3 passos para começar</p>
+
+        <div className="flex gap-2 mb-10">
+          {STEPS.map((s) => (
+            <div
+              key={s.id}
+              className={`flex-1 h-2 rounded ${
+                step >= s.id ? 'bg-green-500' : 'bg-gray-700'
+              }`}
+            />
+          ))}
+        </div>
+
+        {step === 1 && (
+          <div className="space-y-4">
+            <input
+              placeholder="Nome"
+              value={form.firstName}
+              onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+            <input
+              placeholder="Apelido"
+              value={form.lastName}
+              onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+            <input
+              placeholder="Telemóvel (+258)"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-4">
+            <input
+              placeholder="Marca (ex: Toyota)"
+              value={form.vehicleMake}
+              onChange={(e) => setForm({ ...form, vehicleMake: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+            <input
+              placeholder="Modelo (ex: Corolla)"
+              value={form.vehicleModel}
+              onChange={(e) => setForm({ ...form, vehicleModel: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+            <input
+              placeholder="Ano"
+              value={form.vehicleYear}
+              onChange={(e) => setForm({ ...form, vehicleYear: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+            <input
+              placeholder="Matrícula"
+              value={form.licensePlate}
+              onChange={(e) => setForm({ ...form, licensePlate: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+            <input
+              placeholder="Cor"
+              value={form.vehicleColor}
+              onChange={(e) => setForm({ ...form, vehicleColor: e.target.value })}
+              className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl text-lg"
+            />
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <label className="block">
+              <span className="text-gray-400 block mb-1">Carta de Condução (Frente)</span>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setForm({ ...form, licenseFront: e.target.files?.[0] ?? null })}
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+              />
+            </label>
+            <label className="block">
+              <span className="text-gray-400 block mb-1">Carta de Condução (Costas)</span>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setForm({ ...form, licenseBack: e.target.files?.[0] ?? null })}
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+              />
+            </label>
+            <label className="block">
+              <span className="text-gray-400 block mb-1">Seguro</span>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setForm({ ...form, insurance: e.target.files?.[0] ?? null })}
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+              />
+            </label>
+            <label className="block">
+              <span className="text-gray-400 block mb-1">Registo do Veículo</span>
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setForm({ ...form, registration: e.target.files?.[0] ?? null })}
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+              />
+            </label>
+          </div>
+        )}
+
+        <div className="flex gap-4 mt-10">
+          {step > 1 ? (
+            <button
+              type="button"
+              onClick={() => setStep(step - 1)}
+              className="flex-1 py-4 bg-gray-800 rounded-xl font-semibold text-lg"
+            >
+              Voltar
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={() =>
+              step < 3 ? setStep(step + 1) : handleSubmit()
+            }
+            disabled={loading}
+            className="flex-1 py-4 bg-green-600 rounded-xl font-semibold text-lg hover:bg-green-500 disabled:opacity-50"
+          >
+            {step < 3 ? 'Continuar' : loading ? 'A submeter...' : 'Submeter'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
