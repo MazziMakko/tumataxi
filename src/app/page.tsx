@@ -4,8 +4,12 @@ import DriverApp from '@/components/DriverApp';
 import SimpleTest from '@/components/SimpleTest';
 
 export default function Home() {
-  // Temporarily show simple test to debug white screen
-  return <SimpleTest />;
+  // Debug mode: Set to true to show simple test, false for full app
+  const debugMode = false;
   
-  // return <DriverApp />;
+  if (debugMode) {
+    return <SimpleTest />;
+  }
+  
+  return <DriverApp />;
 }

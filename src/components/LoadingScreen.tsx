@@ -8,6 +8,8 @@ import { motion } from 'framer-motion';
  * Displays TumaTaxi branding with loading animation
  */
 export default function LoadingScreen() {
+  console.log('LoadingScreen rendered at:', new Date().toISOString());
+  
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-center">
@@ -57,6 +59,10 @@ export default function LoadingScreen() {
         >
           Inicializando...
         </motion.p>
+        
+        <div className="mt-8 text-xs text-gray-600">
+          Loading: {new Date().toLocaleTimeString()}
+        </div>
       </div>
     </div>
   );
