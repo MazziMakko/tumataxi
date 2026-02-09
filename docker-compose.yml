@@ -33,8 +33,10 @@ services:
     restart: always
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-tumataxi}
-      NEXT_PUBLIC_API_URL: https://tumataxi.com
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:${DB_PASSWORD}@postgres:5432/tumataxi}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://tumataxi.com}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     depends_on:
       postgres:
         condition: service_healthy

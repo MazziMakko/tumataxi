@@ -22,7 +22,7 @@ export const CURRENCY = {
 
 /**
  * Format amount to MZN currency string
- * Example: 1234.56 → "1.234,56 MT"
+ * Example: 1234.56 → "1.234,56 MT" | 1200 → "1.200 MT"
  */
 export function formatCurrencyMZN(
   amount: number | string,
@@ -32,13 +32,12 @@ export function formatCurrencyMZN(
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
 
   const formatted = new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: 'MZN',
-    minimumFractionDigits: 2,
+    style: 'decimal',
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(numAmount);
 
-  return formatted;
+  return `${formatted} MT`;
 }
 
 /**

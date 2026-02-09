@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { formatCurrencyMZN } from '@/lib/localization/mozambique';
 
 export default function DriverDashboardPage() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
@@ -71,8 +72,8 @@ export default function DriverDashboardPage() {
   if (profile?.verificationStatus === 'PENDING') {
     return (
       <div className="min-h-screen bg-black text-white p-6 flex flex-col items-center justify-center">
-        <div className="w-20 h-20 rounded-full bg-amber-500/20 flex items-center justify-center mb-6">
-          <svg className="w-10 h-10 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-6">
+          <svg className="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 0 11 18 0z" />
           </svg>
         </div>
@@ -85,7 +86,7 @@ export default function DriverDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-black text-white p-6 pb-24">
       <div className="max-w-lg mx-auto">
         <h1 className="text-2xl font-bold mb-8">Painel do Motorista</h1>
 
@@ -94,8 +95,8 @@ export default function DriverDashboardPage() {
           disabled={toggling || profile?.verificationStatus !== 'APPROVED'}
           className={`w-full py-6 rounded-2xl font-bold text-xl mb-8 transition ${
             profile?.isOnline
-              ? 'bg-red-600 hover:bg-red-500'
-              : 'bg-green-600 hover:bg-green-500'
+              ? 'bg-red-600 hover:bg-red-500 text-white'
+              : 'bg-primary text-black hover:bg-primary-600'
           } disabled:opacity-50`}
         >
           {profile?.isOnline ? 'PARAR - Ir Offline' : 'IR ONLINE'}
@@ -104,8 +105,8 @@ export default function DriverDashboardPage() {
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-900 rounded-2xl p-6">
             <p className="text-gray-400 text-sm mb-1">Hoje</p>
-            <p className="text-2xl font-bold text-green-400">
-              {profile?.todaysEarningsMZN ?? 0} MZN
+            <p className="text-2xl font-bold text-primary">
+              {formatCurrencyMZN(profile?.todaysEarningsMZN ?? 0)}
             </p>
           </div>
           <div className="bg-gray-900 rounded-2xl p-6">

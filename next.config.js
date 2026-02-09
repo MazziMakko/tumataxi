@@ -1,10 +1,14 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
+  output: 'standalone',
   reactStrictMode: true,
   swcMinify: true,
   compress: true,
   poweredByHeader: false,
+  async rewrites() {
+    return [{ source: '/health', destination: '/api/health' }];
+  },
   // Optimize for low-bandwidth 3G networks
   images: {
     formats: ['image/webp', 'image/avif'],

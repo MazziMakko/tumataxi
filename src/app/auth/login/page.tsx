@@ -28,7 +28,7 @@ function LoginForm() {
       return;
     }
     if (!data.user) {
-      setError('Login failed');
+      setError('Falha ao entrar');
       setLoading(false);
       return;
     }
@@ -46,7 +46,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-2">Tuma Taxi</h1>
         <p className={`mb-8 ${isDriver ? 'text-gray-400' : 'text-gray-600'}`}>
-          {isDriver ? 'Log in to Drive' : 'Log in to Ride'}
+          {isDriver ? 'Entrar para conduzir' : 'Entrar para viajar'}
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -54,7 +54,7 @@ function LoginForm() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
               isDriver
                 ? 'bg-gray-800 border border-gray-700 text-white placeholder-gray-500'
                 : 'border border-gray-300'
@@ -66,7 +66,7 @@ function LoginForm() {
             placeholder="Senha"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
               isDriver
                 ? 'bg-gray-800 border border-gray-700 text-white placeholder-gray-500'
                 : 'border border-gray-300'
@@ -77,10 +77,10 @@ function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 font-semibold rounded-lg disabled:opacity-50 ${
+            className={`w-full py-3 font-bold rounded-lg disabled:opacity-50 ${
               isDriver
-                ? 'bg-green-600 hover:bg-green-500 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                ? 'bg-primary text-black hover:bg-primary-600'
+                : 'bg-primary text-black hover:bg-primary-600'
             }`}
           >
             {loading ? 'A entrar...' : 'Entrar'}
@@ -90,7 +90,7 @@ function LoginForm() {
           Não tem conta?{' '}
           <Link
             href={`/auth/signup${roleParam ? `?role=${roleParam}` : ''}`}
-            className="text-blue-500 font-medium hover:underline"
+            className="text-primary font-medium hover:underline"
           >
             Registar
           </Link>

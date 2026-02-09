@@ -96,8 +96,8 @@ function SignupForm() {
               className={`flex-1 py-3 rounded-lg font-medium ${
                 role === 'PASSENGER'
                   ? isDriver
-                    ? 'bg-green-600 text-white'
-                    : 'bg-blue-600 text-white'
+                    ? 'bg-primary text-black'
+                    : 'bg-primary text-black'
                   : isDriver
                     ? 'bg-gray-800 text-gray-400'
                     : 'bg-gray-100 text-gray-600'
@@ -111,8 +111,8 @@ function SignupForm() {
               className={`flex-1 py-3 rounded-lg font-medium ${
                 role === 'DRIVER'
                   ? isDriver
-                    ? 'bg-green-600 text-white'
-                    : 'bg-blue-600 text-white'
+                    ? 'bg-primary text-black'
+                    : 'bg-primary text-black'
                   : isDriver
                     ? 'bg-gray-800 text-gray-400'
                     : 'bg-gray-100 text-gray-600'
@@ -126,7 +126,7 @@ function SignupForm() {
             placeholder="Nome"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary ${
               isDriver ? 'bg-gray-800 border border-gray-700 text-white' : 'border border-gray-300'
             }`}
             required
@@ -136,7 +136,7 @@ function SignupForm() {
             placeholder="Apelido"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary ${
               isDriver ? 'bg-gray-800 border border-gray-700 text-white' : 'border border-gray-300'
             }`}
             required
@@ -146,7 +146,7 @@ function SignupForm() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary ${
               isDriver ? 'bg-gray-800 border border-gray-700 text-white' : 'border border-gray-300'
             }`}
             required
@@ -156,7 +156,7 @@ function SignupForm() {
             placeholder="Senha (mín. 6 caracteres)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-blue-500 ${
+            className={`w-full px-4 py-3 rounded-lg focus:ring-2 focus:ring-primary ${
               isDriver ? 'bg-gray-800 border border-gray-700 text-white' : 'border border-gray-300'
             }`}
             required
@@ -171,9 +171,7 @@ function SignupForm() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-3 font-semibold rounded-lg disabled:opacity-50 ${
-              isDriver ? 'bg-green-600 hover:bg-green-500' : 'bg-blue-600 hover:bg-blue-700'
-            } text-white`}
+            className="w-full py-3 font-bold rounded-lg disabled:opacity-50 bg-primary text-black hover:bg-primary-600"
           >
             {loading ? 'A registar...' : 'Registar'}
           </button>
@@ -182,7 +180,7 @@ function SignupForm() {
           Já tem conta?{' '}
           <Link
             href={`/auth/login${roleParam ? `?role=${roleParam}` : ''}`}
-            className="text-blue-500 font-medium hover:underline"
+            className="text-primary font-medium hover:underline"
           >
             Entrar
           </Link>

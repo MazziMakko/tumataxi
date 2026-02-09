@@ -8,18 +8,32 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Mozambique themed colors
+        // Black Gold - Tuma Taxi Brand
         primary: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-          700: '#15803d',
-          800: '#166534',
-          900: '#145231',
+          DEFAULT: '#FFD700',
+          50: '#fffde7',
+          100: '#fff9c4',
+          200: '#fff59d',
+          300: '#fff176',
+          400: '#ffed4e',
+          500: '#FFD700',
+          600: '#ffc107',
+          700: '#ffb300',
+          800: '#ffa000',
+          900: '#ff8f00',
+        },
+        secondary: {
+          DEFAULT: '#000000',
+          50: '#fafafa',
+          100: '#fafafa',
+          200: '#e5e5e5',
+          300: '#d4d4d4',
+          400: '#a3a3a3',
+          500: '#737373',
+          600: '#525252',
+          700: '#404040',
+          800: '#262626',
+          900: '#171717',
         },
       },
       fontFamily: {
