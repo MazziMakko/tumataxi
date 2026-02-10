@@ -1,16 +1,28 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { loginAndRedirect } from '@/actions/auth';
+
+function normalizeLoginError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('rate limit') || m.includes('429') || m.includes('too many')) {
+    return 'Muitas tentativas. Tente novamente em alguns minutos.';
+  }
+  if (m.includes('invalid') && m.includes('credentials')) {
+    return 'Email ou senha incorretos. Tente novamente.';
+  }
+  return message;
+}
 
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const submittedRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const roleParam = searchParams.get('role')?.toLowerCase(); // passenger | driver
@@ -18,18 +30,22 @@ function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittedRef.current || loading) return;
+    submittedRef.current = true;
     setLoading(true);
     setError('');
     const supabase = createClient();
     const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) {
-      setError(authError.message);
+      setError(normalizeLoginError(authError.message));
       setLoading(false);
+      submittedRef.current = false;
       return;
     }
     if (!data.user) {
       setError('Falha ao entrar');
       setLoading(false);
+      submittedRef.current = false;
       return;
     }
     const { destination, role } = await loginAndRedirect(data.user.id);

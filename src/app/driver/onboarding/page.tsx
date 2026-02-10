@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,8 @@ const STEPS = [
 export default function DriverOnboardingPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submittedRef = useRef(false);
   const [form, setForm] = useState({
     // Step 1
     firstName: '',
@@ -45,10 +47,16 @@ export default function DriverOnboardingPage() {
   }
 
   async function handleSubmit() {
+    if (submittedRef.current || loading) return;
+    submittedRef.current = true;
     setLoading(true);
+    setSubmitError(null);
     try {
       const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error('Not authenticated');
+      if (!user) {
+        setSubmitError('Sessão inválida. Faça login novamente.');
+        return;
+      }
 
       let licenseFrontUrl = '';
       let licenseBackUrl = '';
@@ -90,14 +98,19 @@ export default function DriverOnboardingPage() {
         }),
       });
 
-      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubmitError(typeof data.error === 'string' ? data.error : 'Erro ao submeter. Tente novamente.');
+        return;
+      }
       router.push('/driver/dashboard');
       router.refresh();
     } catch (err) {
       console.error(err);
-      alert('Erro ao submeter. Tente novamente.');
+      setSubmitError('Erro ao submeter. Tente novamente.');
     } finally {
       setLoading(false);
+      submittedRef.current = false;
     }
   }
 
@@ -217,6 +230,9 @@ export default function DriverOnboardingPage() {
           </div>
         )}
 
+        {submitError && (
+          <p className="mt-4 text-red-400 text-sm">{submitError}</p>
+        )}
         <div className="flex gap-4 mt-10">
           {step > 1 ? (
             <button

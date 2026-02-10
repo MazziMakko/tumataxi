@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import Map, { Marker } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { formatCurrencyMZN } from '@/lib/localization/mozambique';
+import LogoutButton from '@/components/LogoutButton';
 
 // Maputo City Center — Rulial defaults
 const MAPUTO = { lat: -25.9692, lng: 32.5732 };
@@ -201,8 +202,11 @@ export default function RideMapPage() {
         </div>
       )}
 
-      <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10 pointer-events-none">
-        <h1 className="text-lg font-bold text-black">Tuma Taxi</h1>
+      <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+        <h1 className="text-lg font-bold text-black pointer-events-none">Tuma Taxi</h1>
+        <div className="pointer-events-auto">
+          <LogoutButton variant="light" />
+        </div>
       </div>
     </div>
   );

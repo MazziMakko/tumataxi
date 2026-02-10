@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { formatCurrencyMZN } from '@/lib/localization/mozambique';
+import LogoutButton from '@/components/LogoutButton';
 
 type PendingRide = {
   id: string;
@@ -176,7 +177,10 @@ export default function DriverDashboardPage() {
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-24">
       <div className="max-w-lg mx-auto">
-        <h1 className="text-2xl font-bold mb-8">Painel do Motorista</h1>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-bold">Painel do Motorista</h1>
+          <LogoutButton />
+        </div>
 
         <button
           onClick={toggleOnline}

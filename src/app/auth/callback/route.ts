@@ -1,7 +1,7 @@
 /**
- * Supabase Auth Callback
+ * Supabase Auth Callback (Yango-style)
  * Handles OAuth redirects and email confirmation links.
- * Ensures User exists in DB before redirect.
+ * Ensures User exists in DB; drivers without DriverProfile go to onboarding.
  */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
@@ -19,10 +19,13 @@ export async function GET(request: Request) {
       const { user } = data;
       const meta = user.user_metadata ?? {};
       const role = (meta.role as string) ?? 'PASSENGER';
-      const existing = await prisma.user.findUnique({ where: { authId: user.id } });
-      if (!existing) {
+      let dbUser = await prisma.user.findUnique({
+        where: { authId: user.id },
+        include: { driverProfile: true },
+      });
+      if (!dbUser) {
         try {
-          await prisma.user.create({
+          dbUser = await prisma.user.create({
             data: {
               authId: user.id,
               email: user.email ?? '',
@@ -31,14 +34,22 @@ export async function GET(request: Request) {
               role: role === 'DRIVER' ? 'DRIVER' : 'PASSENGER',
               emailVerified: true,
             },
+            include: { driverProfile: true },
           });
         } catch (e) {
           if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code !== 'P2002') {
             console.error('Auth callback user create error:', e);
           }
+          dbUser = await prisma.user.findUnique({
+            where: { authId: user.id },
+            include: { driverProfile: true },
+          });
         }
       }
-      const dest = next === '/' ? (role === 'DRIVER' ? '/driver/dashboard' : '/ride/map') : next;
+      let dest = next !== '/' ? next : role === 'DRIVER' ? '/driver/dashboard' : '/ride/map';
+      if (next === '/' && role === 'DRIVER' && dbUser && !dbUser.driverProfile) {
+        dest = '/driver/onboarding';
+      }
       return NextResponse.redirect(`${origin}${dest}`);
     }
   }

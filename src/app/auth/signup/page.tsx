@@ -1,12 +1,24 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { assignRoleOnSignup } from '@/actions/auth';
 
 type Role = 'DRIVER' | 'PASSENGER';
+
+/** Normalize Supabase auth errors for user-friendly PT messages (Yango-style flow) */
+function normalizeSignUpError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('rate limit') || m.includes('rate_limit') || m.includes('429') || m.includes('too many')) {
+    return 'Muitas tentativas. Tente novamente em 5–10 minutos ou use Entrar se já tem conta.';
+  }
+  if (m.includes('already registered') || m.includes('already been registered') || m.includes('already exists')) {
+    return 'Este email já está registado. Use Entrar para aceder à sua conta.';
+  }
+  return message;
+}
 
 function SignupForm() {
   const [email, setEmail] = useState('');
@@ -17,6 +29,7 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const submittedRef = useRef(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const roleParam = searchParams.get('role')?.toLowerCase();
@@ -29,8 +42,11 @@ function SignupForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (submittedRef.current || loading) return;
+    submittedRef.current = true;
     setLoading(true);
     setError('');
+
     const supabase = createClient();
     const { data, error: authError } = await supabase.auth.signUp({
       email,
@@ -41,16 +57,34 @@ function SignupForm() {
           last_name: lastName,
           role,
         },
+        emailRedirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined,
       },
     });
+
     if (authError) {
-      setError(authError.message);
+      const msg = authError.message.toLowerCase();
+      const isAlreadyRegistered = msg.includes('already registered') || msg.includes('already been registered') || msg.includes('already exists');
+      if (isAlreadyRegistered) {
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (!signInError && signInData?.user) {
+          const sync = await assignRoleOnSignup(signInData.user.id, email, firstName, lastName, role);
+          if (sync.success) {
+            const dest = role === 'DRIVER' ? '/driver/onboarding' : '/ride/map';
+            router.push(dest);
+            router.refresh();
+            return;
+          }
+        }
+      }
+      setError(normalizeSignUpError(authError.message));
       setLoading(false);
+      submittedRef.current = false;
       return;
     }
     if (!data.user) {
       setError('Registo falhou');
       setLoading(false);
+      submittedRef.current = false;
       return;
     }
 
@@ -64,6 +98,7 @@ function SignupForm() {
     if (!result.success) {
       setError(result.error ?? 'Erro ao criar perfil');
       setLoading(false);
+      submittedRef.current = false;
       return;
     }
 
@@ -71,6 +106,7 @@ function SignupForm() {
       setAwaitingConfirmation(true);
       setLoading(false);
       setPassword('');
+      submittedRef.current = false;
       return;
     }
 
