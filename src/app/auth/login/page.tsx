@@ -32,7 +32,10 @@ function LoginForm() {
       setLoading(false);
       return;
     }
-    const destination = await loginAndRedirect(data.user.id);
+    const { destination, role } = await loginAndRedirect(data.user.id);
+    if (role && !data.user.user_metadata?.role) {
+      await supabase.auth.updateUser({ data: { role } });
+    }
     router.push(destination);
     router.refresh();
   }

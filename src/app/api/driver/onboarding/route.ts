@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
         licenseBackUrl: licenseBackUrl || null,
         insuranceUrl: insuranceUrl || null,
         vehicleRegistrationUrl: vehicleRegistrationUrl || null,
-        verificationStatus: 'PENDING',
+        verificationStatus: process.env.NEXT_PUBLIC_DEV_AUTO_APPROVE === 'true' ? 'APPROVED' : 'PENDING',
       },
       create: {
         userId: user.id,
@@ -101,7 +101,8 @@ export async function POST(request: NextRequest) {
         licenseBackUrl: licenseBackUrl || null,
         insuranceUrl: insuranceUrl || null,
         vehicleRegistrationUrl: vehicleRegistrationUrl || null,
-        verificationStatus: 'PENDING',
+        verificationStatus: process.env.NEXT_PUBLIC_DEV_AUTO_APPROVE === 'true' ? 'APPROVED' : 'PENDING',
+        documentUrls: [],
       },
     });
 

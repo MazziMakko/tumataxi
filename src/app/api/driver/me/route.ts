@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
 
   const { driverProfile } = user;
   return NextResponse.json({
+    userId: user.id,
     verificationStatus: driverProfile.verificationStatus,
     isOnline: driverProfile.isOnline,
     todaysEarningsMZN: Number(driverProfile.walletBalanceMZN), // Simplified - would need daily aggregation

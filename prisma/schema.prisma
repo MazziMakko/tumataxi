@@ -158,15 +158,16 @@ model DriverProfile {
 model Ride {
   id                  String   @id @default(cuid())
   
-  // Participants
-  driverId            String
-  driver              User     @relation("DriverRides", fields: [driverId], references: [id])
+  // Participants (driverId null until a driver accepts — Rulial request-then-match)
+  driverId            String?
+  driver              User?    @relation("DriverRides", fields: [driverId], references: [id])
   riderId             String
   rider               User     @relation("RiderRides", fields: [riderId], references: [id])
   
-  // Status
+  // Status: REQUESTED → MATCHED → IN_PROGRESS → COMPLETED | CANCELLED
   status              RideStatus @default(REQUESTED)
   rideType            VehicleType? @default(TAXI)  // ECONOMY | COMFORT | BODA
+  vehicleType         String?  // Display / API (e.g. "ECONOMY", "TAXI")
   
   // Pickup & Dropoff (Geographic)
   pickupLatitude      Float
@@ -184,6 +185,7 @@ model Ride {
   actualDurationMin   Int?
   
   // Financial (All in MZN - Mozambican Metical)
+  price               Float?  // Simple fare for request flow (Rulial)
   baseFareMZN         Decimal @db.Decimal(10, 2)
   surgeMultiplier     Decimal @default(1.0) @db.Decimal(3, 2)
   finalFareMZN        Decimal @db.Decimal(10, 2)
@@ -217,8 +219,6 @@ model Ride {
   @@index([riderId])
   @@index([status])
   @@index([completedAt])
-  
-  @@unique([id, driverId, riderId])
 }
 
 // ============================================================================
