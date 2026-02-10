@@ -35,6 +35,7 @@ export default function DriverDashboardPage() {
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   const mounted = useRef(true);
+  const redirecting = useRef(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function DriverDashboardPage() {
         const supabase = createClient();
         const { data: { user: u } } = await supabase.auth.getUser();
         if (!u) {
-          router.replace('/');
+          if (mounted.current) router.replace('/');
           return;
         }
         if (!mounted.current) return;
@@ -59,19 +60,28 @@ export default function DriverDashboardPage() {
 
         const res = await fetch(`/api/driver/me?authId=${encodeURIComponent(u.id)}`);
         if (!mounted.current) return;
-        if (res.ok) {
-          const data = await res.json();
-          setProfile({
-            userId: data.userId,
-            verificationStatus: data.verificationStatus ?? 'PENDING',
-            isOnline: Boolean(data.isOnline),
-            todaysEarningsMZN: Number(data.todaysEarningsMZN) || 0,
-            totalRidesCompleted: Number(data.totalRidesCompleted) || 0,
-          });
-        } else {
-          router.replace('/driver/onboarding');
+
+        if (!res.ok) {
+          if (mounted.current && !redirecting.current) {
+            redirecting.current = true;
+            router.replace('/driver/onboarding');
+          }
           return;
         }
+
+        const data = await res.json().catch(() => null);
+        if (!mounted.current) return;
+        if (data == null || typeof data !== 'object') {
+          setLoadError('Resposta inválida. Tente novamente.');
+          return;
+        }
+        setProfile({
+          userId: data.userId,
+          verificationStatus: data.verificationStatus ?? 'PENDING',
+          isOnline: Boolean(data.isOnline),
+          todaysEarningsMZN: Number(data.todaysEarningsMZN) || 0,
+          totalRidesCompleted: Number(data.totalRidesCompleted) || 0,
+        });
       } catch (e) {
         if (mounted.current) {
           setLoadError('Erro ao carregar. Tente novamente.');
@@ -133,9 +143,10 @@ export default function DriverDashboardPage() {
   }, [profile?.isOnline, user]);
 
   useEffect(() => {
-    if (!loading && user && !profile && !loadError) {
-      router.replace('/driver/onboarding');
-    }
+    if (loading || loadError || profile || !user) return;
+    if (redirecting.current) return;
+    redirecting.current = true;
+    router.replace('/driver/onboarding');
   }, [loading, user, profile, loadError, router]);
 
   const handleAccept = useCallback(async () => {

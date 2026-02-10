@@ -13,10 +13,16 @@ export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
   const { pathname } = request.nextUrl;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnon) {
+    return supabaseResponse;
+  }
+
+  type AuthUser = { user_metadata?: { role?: string }; app_metadata?: { role?: string } } | null;
+  let user: AuthUser = null;
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseAnon, {
       cookies: {
         getAll() {
           return request.cookies.getAll().map((c) => ({ name: c.name, value: c.value }));
@@ -27,19 +33,19 @@ export async function middleware(request: NextRequest) {
           );
         },
       },
-    }
-  );
-
-  // Refresh session
-  const { data: { user } } = await supabase.auth.getUser();
+    });
+    const { data } = await supabase.auth.getUser();
+    user = (data?.user ?? null) as AuthUser;
+  } catch {
+    user = null;
+  }
 
   const isDriverRoute = pathname.startsWith('/driver');
   const isRideRoute = pathname.startsWith('/ride');
   const isAuthRoute = pathname.startsWith('/auth/login') || pathname.startsWith('/auth/signup');
   const isAuthCallback = pathname.startsWith('/auth/callback');
 
-  // Get role from user metadata (set during signup, verified by DB in server action)
-  const role = (user?.user_metadata?.role as AppRole) ?? (user?.app_metadata?.role as AppRole);
+  const role = (user?.user_metadata?.role as AppRole) ?? (user?.app_metadata?.role as AppRole) ?? null;
 
   // Not logged in - protect /driver/* and /ride/*
   if (!user) {
