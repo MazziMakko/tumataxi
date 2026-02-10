@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { formatCurrencyMZN } from '@/lib/localization/mozambique';
@@ -14,6 +14,11 @@ type PendingRide = {
   vehicleType?: string;
 };
 
+function safeFormatMZN(value: unknown): string {
+  const n = typeof value === 'number' && Number.isFinite(value) ? value : Number(value);
+  return formatCurrencyMZN(Number.isFinite(n) ? n : 0);
+}
+
 export default function DriverDashboardPage() {
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [profile, setProfile] = useState<{
@@ -24,67 +29,114 @@ export default function DriverDashboardPage() {
     totalRidesCompleted: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [toggling, setToggling] = useState(false);
   const [pendingRide, setPendingRide] = useState<PendingRide | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
+  const mounted = useRef(true);
   const router = useRouter();
 
   useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const { data: { user: u } } = await supabase.auth.getUser();
-      if (!u) {
-        router.push('/');
-        return;
-      }
-      setUser(u);
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
-      const res = await fetch(`/api/driver/me?authId=${u.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(data);
-      } else {
-        router.push('/driver/onboarding');
+  useEffect(() => {
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user: u } } = await supabase.auth.getUser();
+        if (!u) {
+          router.replace('/');
+          return;
+        }
+        if (!mounted.current) return;
+        setUser(u);
+        setLoadError(null);
+
+        const res = await fetch(`/api/driver/me?authId=${encodeURIComponent(u.id)}`);
+        if (!mounted.current) return;
+        if (res.ok) {
+          const data = await res.json();
+          setProfile({
+            userId: data.userId,
+            verificationStatus: data.verificationStatus ?? 'PENDING',
+            isOnline: Boolean(data.isOnline),
+            todaysEarningsMZN: Number(data.todaysEarningsMZN) || 0,
+            totalRidesCompleted: Number(data.totalRidesCompleted) || 0,
+          });
+        } else {
+          router.replace('/driver/onboarding');
+          return;
+        }
+      } catch (e) {
+        if (mounted.current) {
+          setLoadError('Erro ao carregar. Tente novamente.');
+          console.error('Driver dashboard load error:', e);
+        }
+      } finally {
+        if (mounted.current) setLoading(false);
       }
-      setLoading(false);
     })();
   }, [router]);
 
-  // Supabase Realtime: listen for new REQUESTED rides (Rulial matching)
+  // Supabase Realtime: listen for new REQUESTED rides (non-fatal; errors logged only)
   useEffect(() => {
     if (!profile?.isOnline || !user) return;
-    const supabase = createClient();
-    // Table name in Postgres is lowercase when using Prisma default (no @@map)
-    const channel = supabase
-      .channel('ride-requests')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Ride',
-        },
-        (payload: { new: Record<string, unknown> }) => {
-          const row = payload.new as Record<string, unknown>;
-          if (row.status === 'REQUESTED') {
-            const price = typeof row.price === 'number' ? row.price : Number(row.finalFareMZN ?? row.baseFareMZN ?? 0);
-            setPendingRide({
-              id: String(row.id),
-              price,
-              pickupAddress: String(row.pickupAddress ?? 'Maputo'),
-              dropoffAddress: row.dropoffAddress != null ? String(row.dropoffAddress) : undefined,
-              vehicleType: row.vehicleType != null ? String(row.vehicleType) : undefined,
-            });
+    let supabase: ReturnType<typeof createClient> | null = null;
+    let ch: ReturnType<ReturnType<typeof createClient>['channel']> | null = null;
+    try {
+      supabase = createClient();
+      ch = supabase
+        .channel('ride-requests')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'Ride',
+          },
+          (payload: { new: Record<string, unknown> }) => {
+            try {
+              const row = (payload?.new ?? {}) as Record<string, unknown>;
+              if (row.status === 'REQUESTED') {
+                const price = typeof row.price === 'number' ? row.price : Number(row.finalFareMZN ?? row.baseFareMZN ?? 0);
+                setPendingRide({
+                  id: String(row.id ?? ''),
+                  price: Number.isFinite(price) ? price : 0,
+                  pickupAddress: String(row.pickupAddress ?? 'Maputo'),
+                  dropoffAddress: row.dropoffAddress != null ? String(row.dropoffAddress) : undefined,
+                  vehicleType: row.vehicleType != null ? String(row.vehicleType) : undefined,
+                });
+              }
+            } catch (err) {
+              console.warn('Realtime payload handler error:', err);
+            }
           }
-        }
-      )
-      .subscribe();
-
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('Realtime subscription error (driver dashboard):', err);
+    }
     return () => {
-      supabase.removeChannel(channel);
+      if (supabase && ch) {
+        try {
+          supabase.removeChannel(ch);
+        } catch {
+          // ignore
+        }
+      }
     };
   }, [profile?.isOnline, user]);
+
+  useEffect(() => {
+    if (!loading && user && !profile && !loadError) {
+      router.replace('/driver/onboarding');
+    }
+  }, [loading, user, profile, loadError, router]);
 
   const handleAccept = useCallback(async () => {
     if (!pendingRide || !profile?.userId || accepting) return;
@@ -158,6 +210,29 @@ export default function DriverDashboardPage() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-screen bg-black text-white p-6 flex flex-col items-center justify-center">
+        <p className="text-red-400 mb-4">{loadError}</p>
+        <button
+          type="button"
+          onClick={() => { setLoadError(null); setLoading(true); window.location.reload(); }}
+          className="py-2 px-4 bg-primary text-black font-semibold rounded-lg"
+        >
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  if (!profile && user) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <p className="text-gray-400">A redirecionar...</p>
+      </div>
+    );
+  }
+
   if (profile?.verificationStatus === 'PENDING') {
     return (
       <div className="min-h-screen bg-black text-white p-6 flex flex-col items-center justify-center">
@@ -199,7 +274,7 @@ export default function DriverDashboardPage() {
           <div className="mb-6 p-6 bg-gray-900 rounded-2xl border-2 border-primary">
             <h2 className="text-lg font-bold text-primary mb-4">Nova viagem</h2>
             <p className="text-gray-400 text-sm mb-1">Preço</p>
-            <p className="text-2xl font-bold text-white mb-4">{formatCurrencyMZN(pendingRide.price)}</p>
+            <p className="text-2xl font-bold text-white mb-4">{safeFormatMZN(pendingRide.price)}</p>
             <p className="text-gray-400 text-sm mb-1">Recolha</p>
             <p className="text-white mb-4">{pendingRide.pickupAddress}</p>
             {pendingRide.dropoffAddress && (
@@ -231,7 +306,7 @@ export default function DriverDashboardPage() {
           <div className="bg-gray-900 rounded-2xl p-6">
             <p className="text-gray-400 text-sm mb-1">Hoje</p>
             <p className="text-2xl font-bold text-primary">
-              {formatCurrencyMZN(profile?.todaysEarningsMZN ?? 0)}
+              {safeFormatMZN(profile?.todaysEarningsMZN)}
             </p>
           </div>
           <div className="bg-gray-900 rounded-2xl p-6">

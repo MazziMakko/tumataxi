@@ -18,6 +18,11 @@ const RIDE_TYPES = [
 
 const POLL_INTERVAL_MS = 5000;
 
+function safeFormatMZN(value: unknown): string {
+  const n = typeof value === 'number' && Number.isFinite(value) ? value : Number(value);
+  return formatCurrencyMZN(Number.isFinite(n) ? n : 0);
+}
+
 export default function RideMapPage() {
   const [destination, setDestination] = useState('');
   const [showSelector, setShowSelector] = useState(false);
@@ -26,6 +31,7 @@ export default function RideMapPage() {
   const [requesting, setRequesting] = useState(false);
   const [searchingRideId, setSearchingRideId] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const onMarkerDragEnd = useCallback((e: { lngLat: { lng: number; lat: number } }) => {
@@ -106,6 +112,24 @@ export default function RideMapPage() {
 
   const showSearchingOverlay = !!searchingRideId;
 
+  if (mapError) {
+    return (
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-gray-100 p-6">
+        <p className="text-gray-600 mb-4">Mapa indisponível. Pode continuar a pedir viagem.</p>
+        <button
+          type="button"
+          onClick={() => setMapError(false)}
+          className="py-2 px-4 bg-primary text-black font-semibold rounded-lg"
+        >
+          Tentar novamente
+        </button>
+        <div className="mt-4">
+          <LogoutButton variant="light" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen w-screen relative bg-white overflow-hidden">
       <Map
@@ -116,6 +140,7 @@ export default function RideMapPage() {
         }}
         style={{ width: '100%', height: '100%' }}
         mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+        onError={() => setMapError(true)}
       >
         <Marker
           longitude={pickup.lng}
@@ -186,7 +211,7 @@ export default function RideMapPage() {
                 >
                   <span className="text-2xl">{r.icon}</span>
                   <span className="font-medium">{r.title}</span>
-                  <span className="text-black font-semibold">{formatCurrencyMZN(r.price)}</span>
+                  <span className="text-black font-semibold">{safeFormatMZN(r.price)}</span>
                 </button>
               ))}
               {requestError && <p className="text-red-500 text-sm">{requestError}</p>}
