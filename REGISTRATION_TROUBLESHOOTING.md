@@ -95,4 +95,10 @@ If registration still can’t be fixed in time, inject test users manually so yo
 
 ---
 
+## 6. ONBOARDING AND REDIRECT LOOPS (FIXED)
+
+If drivers were sent to ride map or dashboard → onboarding → dashboard loops: auth callback and onboarding API now sync DB role to Supabase auth so middleware sees DRIVER. Middleware allows /driver/onboarding for any logged-in user; dashboard redirects to onboarding only on 404 from /api/driver/me. Onboarding file uploads are non-blocking so profile creation can succeed even if driver-docs bucket is missing.
+
+---
+
 **Try Step 1 and 2 first; it’s usually the Zombie User issue. Report back: Did the cleanup work?**

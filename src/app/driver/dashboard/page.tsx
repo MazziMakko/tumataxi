@@ -64,7 +64,8 @@ export default function DriverDashboardPage() {
         if (!res.ok) {
           if (mounted.current && !redirecting.current) {
             redirecting.current = true;
-            router.replace('/driver/onboarding');
+            // 404 = no driver profile → onboarding; 401 = auth mismatch → home
+            router.replace(res.status === 401 ? '/' : '/driver/onboarding');
           }
           return;
         }

@@ -82,10 +82,28 @@ export async function loginAndRedirect(authId: string): Promise<{ destination: s
       meta.last_name ?? meta.lastName
     );
     if (!success) return fallback;
-    return { destination: getRedirectForRole(role), role };
+    let dest = getRedirectForRole(role);
+    if (role === 'DRIVER' || role === 'ADMIN') {
+      const withProfile = await prisma.user.findUnique({
+        where: { authId },
+        select: { driverProfile: { select: { userId: true } } },
+      });
+      if (!withProfile?.driverProfile) dest = '/driver/onboarding';
+    }
+    return { destination: dest, role };
   }
 
-  return { destination: getRedirectForRole(user.role as AppRole), role: user.role as AppRole };
+  const userRole = user.role as AppRole;
+  let destination = getRedirectForRole(userRole);
+  // Drivers without a profile must complete onboarding first (avoid dashboard → onboarding flash)
+  if (userRole === 'DRIVER' || userRole === 'ADMIN') {
+    const withProfile = await prisma.user.findUnique({
+      where: { authId },
+      select: { driverProfile: { select: { userId: true } } },
+    });
+    if (!withProfile?.driverProfile) destination = '/driver/onboarding';
+  }
+  return { destination, role: userRole };
 }
 
 export async function assignRoleOnSignup(

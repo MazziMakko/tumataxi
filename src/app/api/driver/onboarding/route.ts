@@ -106,6 +106,19 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Sync role to Supabase auth so middleware sees DRIVER on next request (avoids redirect to ride map)
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData?.user) {
+        const meta = authData.user.user_metadata ?? {};
+        await supabase.auth.updateUser({
+          data: { ...(typeof meta === 'object' && meta !== null ? meta : {}), role: 'DRIVER' },
+        });
+      }
+    } catch {
+      // non-fatal
+    }
+
     return NextResponse.json({ success: true, userId: user.id });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError) {

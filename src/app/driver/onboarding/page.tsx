@@ -37,13 +37,18 @@ export default function DriverOnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  async function uploadDoc(file: File, path: string) {
-    const { data, error } = await supabase.storage
-      .from('driver-docs')
-      .upload(path, file, { upsert: true });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage.from('driver-docs').getPublicUrl(data.path);
-    return urlData.publicUrl;
+  /** Upload a document; returns empty string on failure so onboarding can still succeed without storage */
+  async function uploadDoc(file: File, path: string): Promise<string> {
+    try {
+      const { data, error } = await supabase.storage
+        .from('driver-docs')
+        .upload(path, file, { upsert: true });
+      if (error) return '';
+      const { data: urlData } = supabase.storage.from('driver-docs').getPublicUrl(data.path);
+      return urlData.publicUrl ?? '';
+    } catch {
+      return '';
+    }
   }
 
   async function handleSubmit() {

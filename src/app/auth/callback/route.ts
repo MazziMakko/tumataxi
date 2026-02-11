@@ -47,8 +47,19 @@ export async function GET(request: Request) {
             });
           }
         }
-        let dest = next !== '/' ? next : role === 'DRIVER' ? '/driver/dashboard' : '/ride/map';
-        if (next === '/' && role === 'DRIVER' && dbUser && !dbUser.driverProfile) {
+        // Sync DB role to Supabase auth so middleware sees it (stops drivers being sent to /ride/map)
+        if (dbUser) {
+          try {
+            await supabase.auth.updateUser({
+              data: { ...(typeof user.user_metadata === 'object' && user.user_metadata !== null ? user.user_metadata : {}), role: dbUser.role },
+            });
+          } catch {
+            // non-fatal
+          }
+        }
+        const dbRole = (dbUser?.role ?? role) as string;
+        let dest = next !== '/' ? next : dbRole === 'DRIVER' ? '/driver/dashboard' : '/ride/map';
+        if (next === '/' && dbRole === 'DRIVER' && dbUser && !dbUser.driverProfile) {
           dest = '/driver/onboarding';
         }
         return NextResponse.redirect(`${origin}${dest}`);

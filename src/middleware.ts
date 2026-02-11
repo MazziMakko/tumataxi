@@ -57,8 +57,14 @@ export async function middleware(request: NextRequest) {
   }
 
   // Logged in - role-based route protection
+  // Allow /driver/onboarding for any logged-in user so drivers without metadata yet can complete signup
   if (isDriverRoute) {
+    if (pathname === '/driver/onboarding') return supabaseResponse;
     if (role !== 'DRIVER' && role !== 'ADMIN') {
+      // No role or passenger: send to onboarding if they're on dashboard (might be driver not yet synced), else ride map
+      if (pathname === '/driver/dashboard') {
+        return NextResponse.redirect(new URL('/driver/onboarding', request.url));
+      }
       return NextResponse.redirect(new URL('/ride/map', request.url));
     }
   }
