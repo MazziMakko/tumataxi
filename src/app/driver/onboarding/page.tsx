@@ -196,40 +196,45 @@ export default function DriverOnboardingPage() {
 
         {step === 3 && (
           <div className="space-y-4">
-            <label className="block">
+            <p className="text-gray-500 text-sm mb-2">Clique em cada campo ou em &quot;Escolher ficheiro&quot; para enviar documentos (opcional).</p>
+            <label className="block" htmlFor="license-front">
               <span className="text-gray-400 block mb-1">Carta de Condução (Frente)</span>
               <input
+                id="license-front"
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(e) => setForm({ ...form, licenseFront: e.target.files?.[0] ?? null })}
-                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary file:text-black file:font-medium"
               />
             </label>
-            <label className="block">
+            <label className="block" htmlFor="license-back">
               <span className="text-gray-400 block mb-1">Carta de Condução (Costas)</span>
               <input
+                id="license-back"
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(e) => setForm({ ...form, licenseBack: e.target.files?.[0] ?? null })}
-                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary file:text-black file:font-medium"
               />
             </label>
-            <label className="block">
+            <label className="block" htmlFor="insurance">
               <span className="text-gray-400 block mb-1">Seguro</span>
               <input
+                id="insurance"
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(e) => setForm({ ...form, insurance: e.target.files?.[0] ?? null })}
-                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary file:text-black file:font-medium"
               />
             </label>
-            <label className="block">
+            <label className="block" htmlFor="registration">
               <span className="text-gray-400 block mb-1">Registo do Veículo</span>
               <input
+                id="registration"
                 type="file"
                 accept="image/*,.pdf"
                 onChange={(e) => setForm({ ...form, registration: e.target.files?.[0] ?? null })}
-                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl"
+                className="w-full px-4 py-4 bg-gray-900 border border-gray-700 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-primary file:text-black file:font-medium"
               />
             </label>
           </div>
