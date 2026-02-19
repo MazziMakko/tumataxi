@@ -2,8 +2,13 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Tuma Taxi - Driver App',
-  description: 'Professional ride-hailing for Mozambican drivers. Fast, reliable, profitable.',
+  title: 'Tuma Taxi - Viagens e Motoristas | Moçambique',
+  description: 'Plataforma de transporte em Moçambique. Viagens fiáveis, ganhos justos, percursos seguros em Maputo e além.',
+  openGraph: {
+    title: 'Tuma Taxi - Moçambique',
+    description: 'Viagens fiáveis. Ganhos justos. Percursos seguros.',
+    type: 'website',
+  },
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',

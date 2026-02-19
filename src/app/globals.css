@@ -3,14 +3,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Align with app dark theme (layout.tsx body uses bg-black text-white) */
+/* Pillar 4: Sovereign Dark — Afrofuturist / Industrial design tokens */
 :root {
   --background: #000000;
   --foreground: #ffffff;
+  --emerald: #10b981;
+  --emerald-dim: rgba(16, 185, 129, 0.15);
+  --copper-ore: #b87333;
+  --copper-dim: rgba(184, 115, 51, 0.2);
+  --transition-ui: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 body {
   color: var(--foreground);
   background-color: var(--background);
   font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Intentional motion — Pillar 4 */
+@media (prefers-reduced-motion: no-preference) {
+  button:not(:disabled):active,
+  a[href]:active {
+    transform: scale(0.98);
+    transition: transform var(--transition-ui);
+  }
 }

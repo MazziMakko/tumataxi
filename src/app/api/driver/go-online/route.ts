@@ -5,6 +5,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { goOnlineSchema } from '@/lib/validations/schemas';
+import { parseOr400 } from '@/lib/validations/parse';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +16,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { authId, isOnline, lat, lng } = body;
+    const parsed = await parseOr400(request, goOnlineSchema);
+    if (!parsed.success) return parsed.response;
+    const { authId, isOnline, lat, lng } = parsed.data;
 
-    if (!authId || authId !== authUser.id) {
+    if (authId !== authUser.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

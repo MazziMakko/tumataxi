@@ -88,15 +88,21 @@ function SignupForm() {
       return;
     }
 
-    const result = await assignRoleOnSignup(
-      data.user.id,
-      email,
-      firstName,
-      lastName,
-      role
-    );
-    if (!result.success) {
-      setError(result.error ?? 'Erro ao criar perfil');
+    let result: { success: boolean; error?: string } | undefined;
+    try {
+      result = await assignRoleOnSignup(
+        data.user.id,
+        email,
+        firstName,
+        lastName,
+        role
+      );
+    } catch (err) {
+      console.error('assignRoleOnSignup call error:', err);
+      result = { success: false, error: 'Erro de ligação. Verifique a rede e tente novamente.' };
+    }
+    if (!result?.success) {
+      setError(result?.error ?? 'Erro ao criar perfil. Se já tem conta, use Entrar.');
       setLoading(false);
       submittedRef.current = false;
       return;

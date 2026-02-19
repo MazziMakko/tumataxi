@@ -49,7 +49,8 @@ export default function DriverDashboardPage() {
     (async () => {
       try {
         const supabase = createClient();
-        const { data: { user: u } } = await supabase.auth.getUser();
+        const { data: authData } = await supabase.auth.getUser();
+        const u = authData?.user ?? null;
         if (!u) {
           if (mounted.current) router.replace('/');
           return;
@@ -206,8 +207,10 @@ export default function DriverDashboardPage() {
         }),
       });
       if (res.ok) {
-        const data = await res.json();
-        setProfile((p) => (p ? { ...p, isOnline: data.isOnline } : null));
+        const data = await res.json().catch(() => null);
+        if (data != null && typeof data.isOnline === 'boolean') {
+          setProfile((p) => (p ? { ...p, isOnline: data.isOnline } : null));
+        }
       }
     } finally {
       setToggling(false);
@@ -254,9 +257,15 @@ export default function DriverDashboardPage() {
           </svg>
         </div>
         <h1 className="text-2xl font-bold mb-2">A aguardar aprovação</h1>
-        <p className="text-gray-400 text-center max-w-sm">
+        <p className="text-gray-400 text-center max-w-sm mb-8">
           A equipa Tuma Taxi está a verificar os seus documentos. Será notificado quando for aprovado.
         </p>
+        <p className="text-gray-500 text-xs text-center max-w-md">
+          Para testes: defina <code className="bg-gray-800 px-1 rounded">NEXT_PUBLIC_DEV_AUTO_APPROVE=true</code> no .env.local e reinicie; ou no Supabase → DriverProfile → altere verificationStatus para APPROVED.
+        </p>
+        <div className="mt-6">
+          <LogoutButton />
+        </div>
       </div>
     );
   }

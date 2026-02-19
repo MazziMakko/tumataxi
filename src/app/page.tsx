@@ -66,9 +66,13 @@ export default function LandingPage() {
         </p>
       </section>
 
-      {/* Footer */}
+      {/* Footer — Pillar 5: Legal Shield links */}
       <footer className="py-6 text-center text-gray-500 text-sm border-t border-gray-200">
-        © Tuma Taxi · Moçambique
+        <p className="mb-2">© Tuma Taxi · Moçambique</p>
+        <p>
+          <Link href="/privacy" className="text-primary/80 hover:underline mr-4">Privacidade</Link>
+          <Link href="/terms" className="text-primary/80 hover:underline">Termos</Link>
+        </p>
       </footer>
     </div>
   );

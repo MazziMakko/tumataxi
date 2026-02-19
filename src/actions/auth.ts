@@ -113,17 +113,26 @@ export async function assignRoleOnSignup(
   lastName: string,
   role: 'DRIVER' | 'PASSENGER'
 ): Promise<{ success: boolean; error?: string }> {
-  if (!prisma) return { success: false, error: 'Database not configured' };
-
+  const fail = (error: string): { success: boolean; error: string } => ({ success: false, error });
   try {
+    if (!prisma) {
+      return fail('Base de dados não configurada. Defina DATABASE_URL no .env.');
+    }
+    if (!authId || typeof email !== 'string' || !email.trim()) {
+      return fail('Dados inválidos (email ou sessão em falta).');
+    }
+
+    const safeFirstName = (typeof firstName === 'string' ? firstName.trim() : '') || email.split('@')[0] || 'User';
+    const safeLastName = (typeof lastName === 'string' ? lastName.trim() : '') || '';
+
     await prisma.user.upsert({
       where: { authId },
-      update: { firstName, lastName, role },
+      update: { firstName: safeFirstName, lastName: safeLastName, role },
       create: {
         authId,
-        email,
-        firstName,
-        lastName,
+        email: email.trim().toLowerCase(),
+        firstName: safeFirstName,
+        lastName: safeLastName,
         role,
         emailVerified: true,
       },
@@ -131,11 +140,23 @@ export async function assignRoleOnSignup(
     return { success: true };
   } catch (e) {
     console.error('assignRoleOnSignup error:', e);
-    if (e && typeof e === 'object' && 'code' in e && (e as { code: string }).code === 'P2002') {
-      const byAuth = await prisma.user.findUnique({ where: { authId } });
-      if (byAuth) return { success: true };
-      return { success: false, error: 'Email já em uso' };
+    try {
+      if (e && typeof e === 'object' && 'code' in e) {
+        const code = (e as { code: string }).code;
+        if (code === 'P2002') {
+          const byAuth = prisma ? await prisma.user.findUnique({ where: { authId } }) : null;
+          if (byAuth) return { success: true };
+          return fail('Este email já está registado. Use Entrar para aceder.');
+        }
+        if (code === 'P2003') return fail('Erro de referência na base de dados. Tente novamente.');
+      }
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/connect|Connection|ECONNREFUSED|ETIMEDOUT/i.test(msg)) {
+        return fail('Sem ligação à base de dados. Verifique DATABASE_URL e rede.');
+      }
+    } catch (inner) {
+      console.error('assignRoleOnSignup inner error:', inner);
     }
-    return { success: false, error: 'Erro ao criar perfil. Tente novamente.' };
+    return fail('Erro ao criar perfil. Tente novamente.');
   }
 }

@@ -8,6 +8,16 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Pillar 4: Sovereign — Emerald & Copper Ore accents
+        emerald: {
+          DEFAULT: '#10b981',
+          dim: 'rgba(16, 185, 129, 0.15)',
+        },
+        copper: {
+          DEFAULT: '#b87333',
+          ore: '#b87333',
+          dim: 'rgba(184, 115, 51, 0.2)',
+        },
         // Black Gold - Tuma Taxi Brand
         primary: {
           DEFAULT: '#FFD700',

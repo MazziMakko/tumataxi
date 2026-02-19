@@ -5,29 +5,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rideDeclineSchema } from '@/lib/validations/schemas';
+import { parseOr400 } from '@/lib/validations/parse';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if database is available
     if (!prisma) {
       return NextResponse.json(
-        { 
-          error: 'Database not configured',
-          message: 'This endpoint requires database configuration'
-        },
+        { error: 'Database not configured', message: 'This endpoint requires database configuration' },
         { status: 503 }
       );
     }
 
-    const { rideId, driverId, declinedAt, reason } = await request.json();
-
-    // Validate required fields
-    if (!rideId || !driverId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: rideId, driverId' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseOr400(request, rideDeclineSchema);
+    if (!parsed.success) return parsed.response;
+    const { rideId, driverId, declinedAt, reason } = parsed.data;
 
     // Check if ride exists
     const ride = await prisma.ride.findUnique({
@@ -47,8 +39,8 @@ export async function POST(request: NextRequest) {
       data: {
         rideId,
         driverId,
-        reason: reason || 'driver_declined',
-        declinedAt: new Date(declinedAt),
+        reason: reason ?? 'driver_declined',
+        declinedAt: declinedAt ? new Date(declinedAt) : new Date(),
         metadata: {
           userAgent: request.headers.get('user-agent'),
           timestamp: new Date().toISOString()

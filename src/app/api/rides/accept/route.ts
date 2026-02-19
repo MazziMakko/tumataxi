@@ -5,29 +5,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { rideAcceptSchema } from '@/lib/validations/schemas';
+import { parseOr400 } from '@/lib/validations/parse';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if database is available
     if (!prisma) {
       return NextResponse.json(
-        { 
-          error: 'Database not configured',
-          message: 'This endpoint requires database configuration'
-        },
+        { error: 'Database not configured', message: 'This endpoint requires database configuration' },
         { status: 503 }
       );
     }
 
-    const { rideId, driverId, acceptedAt } = await request.json();
-
-    // Validate required fields
-    if (!rideId || !driverId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: rideId, driverId' },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseOr400(request, rideAcceptSchema);
+    if (!parsed.success) return parsed.response;
+    const { rideId, driverId, acceptedAt } = parsed.data;
 
     // Check if ride exists and is available
     const ride = await prisma.ride.findUnique({
@@ -55,7 +47,7 @@ export async function POST(request: NextRequest) {
       data: {
         driverId,
         status: 'MATCHED',
-        matchedAt: new Date(acceptedAt),
+        matchedAt: acceptedAt ? new Date(acceptedAt) : new Date(),
       },
       include: {
         driver: {

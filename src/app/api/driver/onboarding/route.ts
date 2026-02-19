@@ -6,7 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
-import { Prisma } from '@prisma/client';
+import { Prisma, VehicleType } from '@prisma/client';
+import { driverOnboardingSchema } from '@/lib/validations/schemas';
+import { parseOr400 } from '@/lib/validations/parse';
+
+const VEHICLE_TYPE_VALUES: VehicleType[] = ['CHAPAS', 'TAXI', 'PRIVATE', 'BODA', 'ECONOMY', 'COMFORT'];
+function toVehicleType(s: string | undefined): VehicleType {
+  const v = (s ?? 'TAXI').toUpperCase();
+  return VEHICLE_TYPE_VALUES.includes(v as VehicleType) ? (v as VehicleType) : 'TAXI';
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +31,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const parsed = await parseOr400(request, driverOnboardingSchema);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
     const {
       authId,
       email,
@@ -41,13 +51,6 @@ export async function POST(request: NextRequest) {
       insuranceUrl,
       vehicleRegistrationUrl,
     } = body;
-
-    if (!authId || !email || !firstName || !lastName) {
-      return NextResponse.json(
-        { error: 'Missing required fields: authId, email, firstName, lastName' },
-        { status: 400 }
-      );
-    }
 
     if (authId !== authUser.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
         vehicleYear: vehicleYear || 2020,
         licensePlate: licensePlate || 'TBD',
         vehicleColor: vehicleColor || 'Unknown',
-        vehicleType: vehicleType || 'TAXI',
+        vehicleType: toVehicleType(vehicleType),
         licenseFrontUrl: licenseFrontUrl || null,
         licenseBackUrl: licenseBackUrl || null,
         insuranceUrl: insuranceUrl || null,
@@ -96,7 +99,7 @@ export async function POST(request: NextRequest) {
         vehicleYear: vehicleYear || 2020,
         licensePlate: licensePlate || 'TBD',
         vehicleColor: vehicleColor || 'Unknown',
-        vehicleType: vehicleType || 'TAXI',
+        vehicleType: toVehicleType(vehicleType),
         licenseFrontUrl: licenseFrontUrl || null,
         licenseBackUrl: licenseBackUrl || null,
         insuranceUrl: insuranceUrl || null,

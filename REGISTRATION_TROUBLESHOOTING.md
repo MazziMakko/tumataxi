@@ -4,7 +4,31 @@ Use this when signup/registration fails (e.g. "email already exists", "email rat
 
 ---
 
-## 0. EMAIL RATE LIMIT (Supabase)
+## 0. "A AGUARDAR APROVAÇÃO" — DRIVER VERIFICATION PAGE
+
+**What it means:** After a driver completes onboarding, their profile is created with `verificationStatus: PENDING`. The dashboard shows "A aguardar aprovação" (Awaiting approval) until an admin or process sets the driver to **APPROVED**. This is intentional: Tuma Taxi reviews documents (license, insurance, etc.) before the driver can go online.
+
+**For testing (skip approval):** Use auto-approve so driver and rider can do real-time testing in sync (see `docs/TUMA_PRODUCT_ROADMAP.md`).
+
+1. In `.env.local` set:
+   ```bash
+   NEXT_PUBLIC_DEV_AUTO_APPROVE=true
+   ```
+   (`.env.example` defaults this to `true` for local testing; set to `false` in production.)
+2. Restart the dev server. **New** drivers who complete onboarding will be created with `APPROVED` and go straight to the full dashboard (IR ONLINE, etc.).
+3. For drivers who **already** submitted and are stuck on "A aguardar aprovação", either:
+   - **Option A:** In Supabase Table Editor → **DriverProfile** → find the row for that driver → set `verificationStatus` to `APPROVED`. Then refresh the dashboard.
+   - **Option B:** Delete that driver’s **DriverProfile** row (and optionally the **User** row and Supabase Auth user), then sign up and onboard again with `NEXT_PUBLIC_DEV_AUTO_APPROVE=true` set.
+
+**Production verification (how Tuma Taxi would verify drivers):**
+
+- **Manual:** An admin panel or Supabase Dashboard where staff see pending drivers, open uploaded docs (licenseFrontUrl, licenseBackUrl, insuranceUrl, vehicleRegistrationUrl), and set `verificationStatus` to `APPROVED` or `REJECTED`. Optionally send email or SMS to the driver (“Your account is approved” / “We need more information”).
+- **Automated:** Integrate a KYC/document-verification API; on success, set `APPROVED` and optionally notify by email/SMS.
+- **Email/SMS:** Not required for the status itself; they are for **notifying** the driver. The verification is updating `DriverProfile.verificationStatus` to `APPROVED` (by human or system).
+
+---
+
+## 1. EMAIL RATE LIMIT (Supabase)
 
 If you see **"Email rate limit reached"** or **"Too many requests"**:
 
@@ -18,7 +42,7 @@ If you see **"Email rate limit reached"** or **"Too many requests"**:
 
 ---
 
-## 1. THE "ZOMBIE" CLEANUP (Most Likely Cause)
+## 2. THE "ZOMBIE" CLEANUP (Most Likely Cause)
 
 If you deleted a user in Supabase **Authentication** but not in your **public tables**, the email can "already exist" in a hidden/auth table and registration fails silently.
 
@@ -37,7 +61,7 @@ The emails are then truly "fresh" for signup.
 
 ---
 
-## 2. FORCE THE MAP (Schema Push) — DONE
+## 3. FORCE THE MAP (Schema Push) — DONE
 
 Your code and **production database** must match. Sync the schema:
 
@@ -54,7 +78,7 @@ npx prisma db push --accept-data-loss
 
 ---
 
-## 3. CHECK THE "BLACK BOX" (Vercel Logs)
+## 4. CHECK THE "BLACK BOX" (Vercel Logs)
 
 If Step 1 and 2 don’t fix it, inspect the failure:
 
@@ -68,7 +92,7 @@ If Step 1 and 2 don’t fix it, inspect the failure:
 
 ---
 
-## 4. EMERGENCY BYPASS (Manual User Injection)
+## 5. EMERGENCY BYPASS (Manual User Injection)
 
 If registration still can’t be fixed in time, inject test users manually so you can run the simulation:
 
@@ -98,6 +122,16 @@ If registration still can’t be fixed in time, inject test users manually so yo
 ## 6. ONBOARDING AND REDIRECT LOOPS (FIXED)
 
 If drivers were sent to ride map or dashboard → onboarding → dashboard loops: auth callback and onboarding API now sync DB role to Supabase auth so middleware sees DRIVER. Middleware allows /driver/onboarding for any logged-in user; dashboard redirects to onboarding only on 404 from /api/driver/me. Onboarding file uploads are non-blocking so profile creation can succeed even if driver-docs bucket is missing.
+
+---
+
+## 7. CLEANING UP TEST / DUMMY DATA
+
+When you're done testing with dummy names and emails and want to wipe test entries:
+
+1. **Supabase Dashboard → Authentication → Users** — Delete the test users.
+2. **Database** — Delete in order to avoid foreign-key errors: RideDecline → Ride → DriverProfile → User (e.g. in Table Editor or SQL Editor). You can target by email pattern (e.g. `%@test.%`) or delete all and re-seed.
+3. Until then, dummy data is fine for validating signup, onboarding, and dashboard flows.
 
 ---
 

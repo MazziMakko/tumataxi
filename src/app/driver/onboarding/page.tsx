@@ -57,9 +57,14 @@ export default function DriverOnboardingPage() {
     setLoading(true);
     setSubmitError(null);
     try {
-      const user = (await supabase.auth.getUser()).data.user;
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData?.user ?? null;
       if (!user) {
         setSubmitError('Sessão inválida. Faça login novamente.');
+        return;
+      }
+      if (!user.email?.trim()) {
+        setSubmitError('Conta sem email. Use uma conta com email válido.');
         return;
       }
 
@@ -86,10 +91,10 @@ export default function DriverOnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           authId: user.id,
-          email: user.email,
-          firstName: form.firstName,
-          lastName: form.lastName,
-          phone: form.phone,
+          email: user.email ?? '',
+          firstName: form.firstName?.trim() || '',
+          lastName: form.lastName?.trim() || '',
+          phone: form.phone?.trim() || undefined,
           vehicleMake: form.vehicleMake,
           vehicleModel: form.vehicleModel,
           vehicleYear: parseInt(form.vehicleYear) || 2020,
@@ -105,7 +110,11 @@ export default function DriverOnboardingPage() {
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setSubmitError(typeof data.error === 'string' ? data.error : 'Erro ao submeter. Tente novamente.');
+        setSubmitError(typeof data?.error === 'string' ? data.error : 'Erro ao submeter. Tente novamente.');
+        return;
+      }
+      if (data && typeof (data as { success?: boolean }).success === 'boolean' && !(data as { success: boolean }).success) {
+        setSubmitError(typeof (data as { error?: string }).error === 'string' ? (data as { error: string }).error : 'Erro ao submeter.');
         return;
       }
       router.push('/driver/dashboard');

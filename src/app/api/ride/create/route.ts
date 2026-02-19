@@ -9,6 +9,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { rideCreateSchema } from '@/lib/validations/schemas';
+import { parseOr400 } from '@/lib/validations/parse';
 
 const MAPUTO_PICKUP = { lat: -25.9692, lng: 32.5732 };
 const MAPUTO_DROPOFF = { lat: -25.9732, lng: 32.5792 };
@@ -69,15 +71,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json().catch(() => ({}));
-    const pickupLat = typeof body.pickupLat === 'number' ? body.pickupLat : MAPUTO_PICKUP.lat;
-    const pickupLng = typeof body.pickupLng === 'number' ? body.pickupLng : MAPUTO_PICKUP.lng;
-    const dropLat = typeof body.dropLat === 'number' ? body.dropLat : MAPUTO_DROPOFF.lat;
-    const dropLng = typeof body.dropLng === 'number' ? body.dropLng : MAPUTO_DROPOFF.lng;
-    const price = typeof body.price === 'number' && body.price >= 0 ? body.price : 150;
-    const vehicleType = typeof body.vehicleType === 'string' ? body.vehicleType : 'ECONOMY';
-    const pickupAddress = typeof body.pickupAddress === 'string' ? body.pickupAddress : 'Maputo, Centro';
-    const dropoffAddress = typeof body.dropoffAddress === 'string' ? body.dropoffAddress : 'Maputo, Destino';
+    const parsed = await parseOr400(request, rideCreateSchema);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
+    const pickupLat = body.pickupLat ?? MAPUTO_PICKUP.lat;
+    const pickupLng = body.pickupLng ?? MAPUTO_PICKUP.lng;
+    const dropLat = body.dropLat ?? MAPUTO_DROPOFF.lat;
+    const dropLng = body.dropLng ?? MAPUTO_DROPOFF.lng;
+    const price = body.price != null && body.price >= 0 ? body.price : 150;
+    const vehicleType = body.vehicleType ?? 'ECONOMY';
+    const pickupAddress = body.pickupAddress ?? 'Maputo, Centro';
+    const dropoffAddress = body.dropoffAddress ?? 'Maputo, Destino';
 
     // 3. Create Ride — status REQUESTED, no driver yet (Rulial: match later)
     const ride = await prisma.ride.create({
