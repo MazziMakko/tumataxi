@@ -541,11 +541,18 @@ export const useDriverStore = create<DriverStoreState>()(
 
       /**
        * Apply waiting fee to the ride fare
+       * MAKKO INTELLIGENCE: Sovereign Revenue Generator
+       * 
+       * This action:
+       * 1. Updates estimated fare in local state (optimistic UI)
+       * 2. Records surcharge to immutable ledger via API
+       * 3. Ensures driver compensation for Maputo pickup challenges
        */
       applyWaitingFee: (waitingFeeMZN: number) =>
         set((state) => {
           if (state.currentRideSession && !state.waitingTimer.waitingFeeApplied) {
-            return {
+            // Optimistic UI update (instant feedback)
+            const newState = {
               currentRideSession: {
                 ...state.currentRideSession,
                 estimatedFareMZN:
@@ -556,6 +563,64 @@ export const useDriverStore = create<DriverStoreState>()(
                 waitingFeeApplied: true,
               },
             };
+
+            // Background ledger sync (append-only)
+            const recordSurcharge = async () => {
+              try {
+                const driverId = localStorage.getItem('driver_id');
+                const currentSession = state.currentRideSession;
+                if (!driverId || !currentSession) return;
+
+                // Calculate billable minutes (reverse calculation)
+                const billableMinutes = Math.ceil(waitingFeeMZN / 15); // 15 MZN per minute
+
+                const response = await fetch('/api/rides/waiting-surcharge', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                  },
+                  body: JSON.stringify({
+                    rideId: currentSession.id,
+                    driverId,
+                    billableMinutes,
+                    surchargeMZN: waitingFeeMZN,
+                    startedAt: state.waitingTimer.startedAt,
+                    completedAt: new Date().toISOString(),
+                  }),
+                });
+
+                if (!response.ok) {
+                  console.error('Failed to record waiting surcharge:', await response.text());
+                  // Note: UI already updated optimistically, so we don't rollback
+                  // This ensures driver always sees the surcharge even if API fails
+                  // Background retry logic can be added later
+                }
+
+                const data = await response.json();
+                console.log('Waiting surcharge recorded:', data);
+              } catch (error) {
+                console.error('Waiting surcharge API error:', error);
+                // Fallback: Store in localStorage for later sync
+                const currentSession = state.currentRideSession;
+                if (!currentSession) return;
+                
+                const pendingSurcharges = JSON.parse(
+                  localStorage.getItem('pending_surcharges') || '[]'
+                );
+                pendingSurcharges.push({
+                  rideId: currentSession.id,
+                  amountMZN: waitingFeeMZN,
+                  timestamp: new Date().toISOString(),
+                });
+                localStorage.setItem('pending_surcharges', JSON.stringify(pendingSurcharges));
+              }
+            };
+
+            // Execute async ledger recording
+            recordSurcharge();
+
+            return newState;
           }
           return state;
         }),

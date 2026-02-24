@@ -1,270 +1,414 @@
-# Tuma Taxi IONOS VPS Deployment Guide
+# TUMA TAXI - PRODUCTION DEPLOYMENT GUIDE
 
-## Pre-Deployment Checklist
+**Date:** 2026-02-24  
+**Status:** 🚀 DEPLOYMENT READY  
+**Target:** Vercel (Production)  
 
-- [ ] IONOS VPS with Ubuntu 22.04 (minimum 2 vCPU, 4GB RAM)
-- [ ] Domain DNS pointing to VPS IP
-- [ ] SSH access to VPS
-- [ ] Email address for Let's Encrypt notifications
-- [ ] Strong password for PostgreSQL (minimum 20 chars, mixed case + symbols)
+---
 
-## Deployment Steps
+## 🔐 SECURITY HARDENING CHECKLIST
 
-### 1. Initial VPS Setup (5 minutes)
+### **1. Environment Variables (CRITICAL)**
 
-Connect via SSH:
-```bash
-ssh root@your_vps_ip
-```
-
-Run initial setup:
-```bash
-# Download and execute setup script
-curl -fsSL https://raw.githubusercontent.com/your-repo/main/deploy-setup.sh -o setup.sh
-chmod +x setup.sh
-./setup.sh tumataxi.com admin@tumataxi.com
-```
-
-**What this does:**
-- Updates all system packages
-- Installs Docker and Docker Compose
-- Configures UFW firewall (ports 22/80/443 only)
-- Creates `/opt/tumataxi` application directory
-- Enables non-root Docker access
-
-### 2. Application Deployment (10 minutes)
+Create `.env.production` with the following:
 
 ```bash
-cd /opt/tumataxi
+# ============================================================================
+# DATABASE (Supabase PostgreSQL)
+# ============================================================================
+DATABASE_URL="postgresql://user:pass@host:5432/tumataxi"
 
-# Clone or upload application files
-git clone your-repo .
-# OR manually upload: docker-compose.yml, nginx.conf, Dockerfile, prisma/
+# ============================================================================
+# SUPABASE (Auth + Storage)
+# ============================================================================
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
-# Create .env with secure values
-cp .env.example .env
-nano .env  # Edit DB_PASSWORD with strong password
+# ============================================================================
+# SECURITY (REQUIRED)
+# ============================================================================
+ADMIN_API_KEY="[GENERATE 64-CHAR RANDOM STRING]"
+NEXTAUTH_SECRET="[GENERATE 32-CHAR RANDOM STRING]"
 
-# Start services
-docker-compose up -d
+# ============================================================================
+# CLICKPESA (Remittance Bridge)
+# ============================================================================
+CLICKPESA_API_KEY="your_clickpesa_api_key"
 
-# Verify containers are running
-docker-compose ps
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+NEXT_PUBLIC_DEV_AUTO_APPROVE="false"  # MUST BE FALSE IN PRODUCTION
+NEXT_PUBLIC_ENABLE_SOS="true"
+NEXT_PUBLIC_ENABLE_INSTANT_PAYOUT="false"
+
+# ============================================================================
+# APP CONFIGURATION
+# ============================================================================
+NEXT_PUBLIC_APP_URL="https://tumataxi.vercel.app"
+NEXT_PUBLIC_TIMEZONE="Africa/Maputo"
+NEXT_PUBLIC_LOCALE="pt-MZ"
+NEXT_PUBLIC_CURRENCY="MZN"
 ```
 
-**What this does:**
-- Pulls base images (postgres:15, nginx:alpine, node:18)
-- Builds Next.js application
-- Creates PostgreSQL database
-- Starts Nginx reverse proxy
-- Starts Certbot for SSL automation
+**Generate secure keys:**
+```bash
+# Generate ADMIN_API_KEY (64 characters)
+openssl rand -base64 48
 
-### 3. SSL Certificate Setup (5 minutes)
+# Generate NEXTAUTH_SECRET (32 characters)
+openssl rand -base64 24
+```
+
+---
+
+### **2. API Security Implementation**
+
+All sensitive endpoints now require authentication:
+
+**Protected Routes:**
+- `/api/admin/*` - Portfolio dashboard, analytics
+- `/api/remittance/*` - Currency conversion
+- `/api/rides/*/cancel-no-show` - No-show penalties
+- `/api/rides/waiting-surcharge` - Surcharge logging
+
+**Usage:**
+```bash
+curl -X POST https://tumataxi.vercel.app/api/admin/portfolio \
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY"
+```
+
+---
+
+### **3. Rate Limiting**
+
+**Current Limits:**
+- 60 requests per minute per IP
+- 429 status code when exceeded
+- Automatic reset after 1 minute
+
+**Future:** Replace in-memory store with Redis/Upstash
+
+---
+
+### **4. CORS Configuration**
+
+**Allowed Origins:**
+- `https://tumataxi.vercel.app` (production)
+- `https://tumataxi.co.mz` (custom domain)
+- `http://localhost:3000` (development only)
+
+---
+
+## 🗄️ DATABASE MIGRATIONS
+
+### **Apply All Migrations**
 
 ```bash
-cd /opt/tumataxi
+# 1. Connect to Supabase
+npm run prisma:studio
 
-# Configure SSL
-chmod +x deploy-ssl.sh
-./deploy-ssl.sh tumataxi.com admin@tumataxi.com
+# 2. Generate Prisma client
+npm run prisma:generate
+
+# 3. Apply migrations
+npm run prisma:migrate
+
+# 4. Verify schema
+npm run prisma:studio
 ```
 
-**What this does:**
-- Stops Nginx temporarily
-- Creates Let's Encrypt certificate for your domain
-- Configures Nginx with HTTPS
-- Starts automatic certificate renewal service
+### **Required Migrations**
 
-### 4. Database Migration (5 minutes)
+1. ✅ `create_remittance_logs.sql` - Remittance audit trail
+2. ✅ Existing Prisma schema - RulialLedger, DriverProfile, etc.
+
+---
+
+## 🚀 DEPLOYMENT TO VERCEL
+
+### **Step 1: Commit Changes to Git**
 
 ```bash
-# Create database schema
-docker-compose exec -T nextjs npx prisma db push
+# 1. Check status
+git status
 
-# Seed initial data (optional)
-docker-compose exec -T nextjs npx prisma db seed
+# 2. Add all changes
+git add .
+
+# 3. Commit with descriptive message
+git commit -m "$(cat <<'EOF'
+feat: Implement Sovereign Execution Stack
+
+FEATURES:
+- 60 FPS UX with Framer Motion
+- Sovereign Revenue Generator (waiting surcharges)
+- No-show cancellation (50 MZN penalty)
+- Portfolio dashboard (IsoFlux + Tuma Taxi)
+- Remittance bridge (MZN → USD conversion)
+- Security hardening (API keys, rate limiting)
+
+SECURITY:
+- Admin API authentication
+- Rate limiting (60 req/min)
+- CORS configuration
+- Environment validation
+
+DOCUMENTATION:
+- 10+ comprehensive docs in /docs
+- API reference guides
+- Testing instructions
+EOF
+)"
+
+# 4. Push to GitHub
+git push origin main
 ```
 
-### 5. Verification
+---
+
+### **Step 2: Deploy to Vercel**
+
+**Option A: CLI Deployment**
 
 ```bash
-# Health check
-chmod +x health-check.sh
-./health-check.sh
+# 1. Install Vercel CLI
+npm i -g vercel
 
-# Manual tests
-curl -I https://tumataxi.com  # Should return 200
-curl -I https://tumataxi.com/api/rides/calculate-commission  # Should return 405 (expected for GET)
+# 2. Login
+vercel login
+
+# 3. Deploy to production
+vercel --prod
 ```
 
-## Monitoring & Maintenance
+**Option B: GitHub Integration (Recommended)**
 
-### View Logs
+1. Go to https://vercel.com/new
+2. Import Git repository
+3. Select `TumaTaxi` repo
+4. Configure environment variables (see below)
+5. Click "Deploy"
+
+---
+
+### **Step 3: Configure Environment Variables in Vercel**
+
+1. Navigate to: Project Settings → Environment Variables
+2. Add ALL variables from `.env.production`
+3. Set environment: **Production**
+4. Click "Save"
+
+**Critical Variables:**
+```
+DATABASE_URL=postgresql://...
+NEXT_PUBLIC_SUPABASE_URL=https://...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+ADMIN_API_KEY=[64-char key]
+CLICKPESA_API_KEY=[your key]
+NEXT_PUBLIC_DEV_AUTO_APPROVE=false
+```
+
+---
+
+### **Step 4: Run Database Migrations on Production**
 
 ```bash
-# All services
-docker-compose logs -f
+# 1. Set DATABASE_URL to production
+export DATABASE_URL="postgresql://prod..."
 
-# Specific service
-docker-compose logs -f nextjs
-docker-compose logs -f postgres
-docker-compose logs -f nginx
+# 2. Run migrations
+npx prisma migrate deploy
+
+# 3. Generate Prisma client
+npx prisma generate
 ```
 
-### Common Operations
+---
+
+### **Step 5: Verify Deployment**
+
+**Health Checks:**
+
+1. **API Health:**
+   ```bash
+   curl https://tumataxi.vercel.app/api/health
+   # Expected: { "status": "ok", "timestamp": "..." }
+   ```
+
+2. **Portfolio Dashboard:**
+   ```bash
+   curl https://tumataxi.vercel.app/admin/portfolio \
+     -H "Authorization: Bearer YOUR_ADMIN_API_KEY"
+   # Expected: Portfolio data JSON
+   ```
+
+3. **Remittance Bridge:**
+   ```bash
+   curl -X POST https://tumataxi.vercel.app/api/remittance/convert \
+     -H "Authorization: Bearer YOUR_ADMIN_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"amountMZN": 10000}'
+   # Expected: { "success": true, "data": { "amountUSD": "160.00", ... } }
+   ```
+
+---
+
+## 📊 POST-DEPLOYMENT MONITORING
+
+### **1. Vercel Analytics**
+
+Enable in Vercel Dashboard:
+- Real User Monitoring (RUM)
+- Web Vitals tracking
+- Error logging
+
+### **2. Supabase Monitoring**
+
+Check in Supabase Dashboard:
+- Database connections
+- Query performance
+- Storage usage
+
+### **3. Custom Alerts**
+
+Set up alerts for:
+- API error rate >5%
+- Database connection failures
+- Rate limit exceeded events
+- Remittance conversion failures
+
+---
+
+## 🔒 SECURITY BEST PRACTICES
+
+### **1. API Key Management**
+
+✅ **DO:**
+- Store in environment variables
+- Use 64+ character keys
+- Rotate quarterly
+- Use different keys for dev/prod
+
+❌ **DON'T:**
+- Commit to Git
+- Share via email/Slack
+- Reuse across projects
+- Use weak keys (<32 chars)
+
+### **2. Database Security**
+
+✅ **Supabase RLS Policies:**
+```sql
+-- Enable Row Level Security
+ALTER TABLE "RulialLedger" ENABLE ROW LEVEL SECURITY;
+
+-- Policy: Drivers can only see their own ledger
+CREATE POLICY "Drivers see own ledger"
+  ON "RulialLedger"
+  FOR SELECT
+  USING (auth.uid() = "userId");
+
+-- Policy: Only service role can insert
+CREATE POLICY "Service role can insert"
+  ON "RulialLedger"
+  FOR INSERT
+  WITH CHECK (auth.role() = 'service_role');
+```
+
+### **3. HTTPS Enforcement**
+
+Vercel automatically provides:
+- SSL/TLS certificates
+- HTTPS redirect
+- HTTP/2 support
+- CDN edge caching
+
+---
+
+## 🧪 POST-DEPLOYMENT TESTING
+
+### **Test Checklist**
+
+- [ ] Driver can go online
+- [ ] Ride request flow works
+- [ ] Waiting timer displays correctly
+- [ ] No-show penalty applies (after 5 min)
+- [ ] Portfolio dashboard loads
+- [ ] Remittance conversion works
+- [ ] All APIs return proper errors
+- [ ] Rate limiting triggers at 60 req/min
+
+---
+
+## 📈 PERFORMANCE TARGETS
+
+### **Vercel Metrics to Monitor**
+
+| Metric | Target | Current |
+|--------|--------|---------|
+| Time to First Byte (TTFB) | <200ms | TBD |
+| First Contentful Paint (FCP) | <1.5s | TBD |
+| Largest Contentful Paint (LCP) | <2.5s | TBD |
+| Cumulative Layout Shift (CLS) | <0.1 | TBD |
+| API Response Time | <500ms | TBD |
+
+---
+
+## 🆘 ROLLBACK PROCEDURE
+
+If deployment fails:
 
 ```bash
-# Restart services
-docker-compose restart
+# 1. Revert to previous deployment in Vercel Dashboard
+# OR via CLI:
+vercel rollback
 
-# Stop services
-docker-compose down
+# 2. Check logs
+vercel logs --follow
 
-# Start services
-docker-compose up -d
+# 3. Fix issues locally
+npm run dev
 
-# Update application (new version)
-git pull
-docker-compose up -d --build
-
-# Database backup
-docker-compose exec -T postgres pg_dump -U postgres tumataxi > backup.sql
-
-# View SSL certificate expiry
-docker-compose exec -T certbot certbot certificates
+# 4. Redeploy
+vercel --prod
 ```
 
-## Security Configuration
+---
 
-### Network Isolation
-- **Internal Network**: PostgreSQL only accessible from NextJS (not exposed)
-- **External Network**: Only Nginx exposed to public (ports 80/443)
-- **Firewall**: UFW allows SSH (22), HTTP (80), HTTPS (443) only
+## 📞 SUPPORT CONTACTS
 
-### Environment Variables
-- Database password: 20+ character random string, symbols included
-- Never commit .env file to Git
-- Rotate DATABASE_URL monthly
+**Technical Lead:** Makko Intelligence  
+**Vercel Support:** https://vercel.com/support  
+**Supabase Support:** https://supabase.com/support  
+**ClickPesa Support:** https://clickpesa.com/support  
 
-### Certificate Management
-- Certbot auto-renews certificates 30 days before expiry
-- Renewal occurs daily at 2 AM (container restart)
-- Certificate path: `/opt/tumataxi/certbot/conf/live/tumataxi.com/`
+---
 
-### Log Rotation
-- JSON-file driver: max 10MB per file, 3 files retained
-- Logs stored in container, not persisted to disk
-- View via `docker-compose logs` command
+## ✅ DEPLOYMENT CHECKLIST (FINAL)
 
-## Troubleshooting
+- [ ] All code committed to Git
+- [ ] Environment variables configured in Vercel
+- [ ] Database migrations applied
+- [ ] Security middleware implemented
+- [ ] API keys generated (64+ chars)
+- [ ] NEXT_PUBLIC_DEV_AUTO_APPROVE=false
+- [ ] CORS origins configured
+- [ ] Rate limiting active
+- [ ] Health checks passing
+- [ ] Monitoring enabled
+- [ ] Documentation complete
+- [ ] Team notified of deployment
 
-### Database Connection Error
-```bash
-# Check PostgreSQL health
-docker-compose exec -T postgres pg_isready
+---
 
-# View database logs
-docker-compose logs postgres
-```
+**THE FIRMAMENT IS BREACHED.**  
+**SECURITY: HARDENED.**  
+**DEPLOYMENT: READY.**  
+**PRODUCTION: GO LIVE.**
 
-### Application Not Starting
-```bash
-# Check Next.js logs
-docker-compose logs nextjs
+---
 
-# Verify environment variables
-docker-compose config | grep -A5 nextjs
-```
-
-### HTTPS Not Working
-```bash
-# Check Nginx logs
-docker-compose logs nginx
-
-# Verify certificate exists
-docker-compose exec -T certbot ls -la /etc/letsencrypt/live/
-
-# Test SSL configuration
-openssl s_client -connect tumataxi.com:443
-```
-
-### High CPU/Memory Usage
-```bash
-# Monitor resources
-docker stats
-
-# Adjust docker-compose.yml resource limits:
-# Add under nextjs service:
-#   deploy:
-#     resources:
-#       limits:
-#         cpus: '1'
-#         memory: 1G
-```
-
-## Backup & Recovery
-
-### Automated Backups (Weekly)
-Add to crontab:
-```bash
-# Daily 3 AM backup
-0 3 * * * cd /opt/tumataxi && docker-compose exec -T postgres pg_dump -U postgres tumataxi | gzip > backups/db_$(date +\%Y\%m\%d).sql.gz
-```
-
-### Restore from Backup
-```bash
-# Stop application
-docker-compose down
-
-# Restore database
-cat backups/db_20240115.sql | docker-compose exec -T postgres psql -U postgres
-
-# Start application
-docker-compose up -d
-```
-
-## Performance Tuning
-
-### PostgreSQL Optimization
-Edit docker-compose.yml, add to postgres environment:
-```
-POSTGRES_INIT_ARGS: "-c shared_buffers=256MB -c max_connections=200"
-```
-
-### Nginx Caching
-Current configuration:
-- API: No caching (every request fresh)
-- Static assets (_next/static): 1 year cache
-- Images/fonts: 30 day cache
-- HTML: 5 minute cache
-
-### Next.js Optimization
-Ensure package.json includes:
-```json
-{
-  "scripts": {
-    "build": "next build"
-  }
-}
-```
-
-## Cost Optimization
-
-- **IONOS VPS 1**: €2.99/month (1 vCPU, 1 GB RAM) - Small deployments only
-- **IONOS VPS 4**: €8.99/month (4 vCPU, 8 GB RAM) - Recommended for production
-- **IONOS VPS XL**: €20/month (8 vCPU, 16 GB RAM) - High-traffic deployments
-
-Estimated monthly cost for production: €15-25 (VPS + SSL included)
-
-## Support & Escalation
-
-### Critical Issues
-1. Check logs: `docker-compose logs -f`
-2. Run health check: `./health-check.sh`
-3. Review docker-compose.yml environment variables
-
-### Database Issues
-Contact: PostgreSQL documentation at https://www.postgresql.org/docs/
-
-### SSL Certificate Issues
-Contact: Let's Encrypt support at https://letsencrypt.org/docs/
+**Version:** 1.0.0  
+**Status:** 🚀 PRODUCTION DEPLOYMENT READY
