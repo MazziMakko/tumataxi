@@ -19,6 +19,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useDriverStore } from '@/store/driverStore';
 import { formatCurrencyMZN } from '@/lib/localization/mozambique';
 import { validateTierEligibility } from '@/lib/rulial/commission';
+import { getGeoConfig } from '@/config/geo';
 
 // ============================================================================
 // TYPES
@@ -114,8 +115,8 @@ export const DriverDashboard: React.FC = () => {
         <Map
           ref={mapRef}
           initialViewState={{
-            latitude: -25.9692,
-            longitude: 32.5732,
+            latitude: getGeoConfig().centerCoordinates.lat,
+            longitude: getGeoConfig().centerCoordinates.lng,
             zoom: 12,
           }}
           style={{ width: '100%', height: '100%' }}

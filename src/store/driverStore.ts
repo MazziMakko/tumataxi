@@ -16,6 +16,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Language } from '@/lib/i18n';
+import { getGeoConfig } from '@/config/geo';
 
 // ============================================================================
 // TYPES
@@ -248,6 +249,8 @@ const initialWaitingTimer: WaitingTimerState = {
   noShowCancelled: false,
 };
 
+const GEO_CONFIG = getGeoConfig();
+
 export const useDriverStore = create<DriverStoreState>()(
   persist(
     (set, _get) => ({
@@ -258,8 +261,8 @@ export const useDriverStore = create<DriverStoreState>()(
       offlineRideQueue: [],
       isConnected: true,
       connectionQuality: 'excellent',
-      currentLat: -25.9692, // Maputo
-      currentLon: 32.5732,
+      currentLat: GEO_CONFIG.centerCoordinates.lat,
+      currentLon: GEO_CONFIG.centerCoordinates.lng,
       lastLocationUpdate: new Date(),
       stats: initialStats,
       offerExpiresAt: null,

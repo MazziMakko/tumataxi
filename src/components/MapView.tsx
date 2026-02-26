@@ -1,7 +1,7 @@
 /**
  * MapView Component
  * react-map-gl with MapLibre GL JS
- * Dark mode, high contrast, centered on Maputo
+ * Dark mode, high contrast, dynamically centered via geo config
  * Shows driver location, available rides, real-time updates
  */
 
@@ -11,6 +11,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Map, { Marker, Popup } from 'react-map-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useDriverStore, useDriverLocation } from '@/store/driverStore';
+import { getGeoConfig } from '@/config/geo';
 
 // ============================================================================
 // TYPES
@@ -41,9 +42,10 @@ const MAPBOX_STYLES: MapStyle = {
   dark: 'https://basemaps.cartocdn.com/gl/voyager-nolabels-gl-style/style.json',
 };
 
-const MAPUTO_CENTER = {
-  latitude: -25.9692,
-  longitude: 32.5732,
+const GEO_CONFIG = getGeoConfig();
+const MAP_CENTER = {
+  latitude: GEO_CONFIG.centerCoordinates.lat,
+  longitude: GEO_CONFIG.centerCoordinates.lng,
 };
 
 // ============================================================================
@@ -59,8 +61,8 @@ export const MapView: React.FC<MapViewProps> = ({ onMapLoad }) => {
   const isOnline = useDriverStore((s) => s.state !== 'OFFLINE');
 
   const [viewState, setViewState] = useState({
-    longitude: MAPUTO_CENTER.longitude,
-    latitude: MAPUTO_CENTER.latitude,
+    longitude: MAP_CENTER.longitude,
+    latitude: MAP_CENTER.latitude,
     zoom: 13,
     bearing: 0,
     pitch: 0,

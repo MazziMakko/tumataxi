@@ -11,6 +11,7 @@ import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDriverStore } from '@/store/driverStore';
 import { X, CheckCircle, XCircle, MapPin, Clock, DollarSign, Star } from 'lucide-react';
+import { getGeoConfig } from '@/config/geo';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -35,10 +36,11 @@ async function getCurrentLocation(): Promise<{ latitude: number; longitude: numb
       },
       (error) => {
         console.error('Geolocation error:', error);
-        // Fallback to Maputo coordinates
+        // Fallback to geo config center coordinates
+        const geoConfig = getGeoConfig();
         resolve({
-          latitude: -25.9664,
-          longitude: 32.5832
+          latitude: geoConfig.centerCoordinates.lat,
+          longitude: geoConfig.centerCoordinates.lng
         });
       },
       {

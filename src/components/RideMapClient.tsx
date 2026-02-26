@@ -5,9 +5,17 @@ import Map, { Marker } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { formatCurrencyMZN } from '@/lib/localization/mozambique';
 import LogoutButton from '@/components/LogoutButton';
+import { getGeoConfig, generateSimulatedRideCoordinates } from '@/config/geo';
 
-const MAPUTO = { lat: -25.9692, lng: 32.5732 };
-const MAPUTO_DROPOFF = { lat: -25.9732, lng: 32.5792 };
+const GEO_CONFIG = getGeoConfig();
+const DEFAULT_PICKUP = { 
+  lat: GEO_CONFIG.centerCoordinates.lat, 
+  lng: GEO_CONFIG.centerCoordinates.lng 
+};
+
+// Generate a random dropoff within test radius
+const { dropoff } = generateSimulatedRideCoordinates();
+const DEFAULT_DROPOFF = { lat: dropoff.lat, lng: dropoff.lng };
 
 const RIDE_TYPES = [
   { id: 'ECONOMY', title: 'Economia', price: 150, icon: '🚗' },
@@ -26,7 +34,7 @@ export default function RideMapClient() {
   const [destination, setDestination] = useState('');
   const [showSelector, setShowSelector] = useState(false);
   const [selectedRide, setSelectedRide] = useState<string | null>(null);
-  const [pickup, setPickup] = useState(MAPUTO);
+  const [pickup, setPickup] = useState(DEFAULT_PICKUP);
   const [requesting, setRequesting] = useState(false);
   const [searchingRideId, setSearchingRideId] = useState<string | null>(null);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -84,12 +92,12 @@ export default function RideMapClient() {
         body: JSON.stringify({
           pickupLat: pickup.lat,
           pickupLng: pickup.lng,
-          dropLat: MAPUTO_DROPOFF.lat,
-          dropLng: MAPUTO_DROPOFF.lng,
+          dropLat: DEFAULT_DROPOFF.lat,
+          dropLng: DEFAULT_DROPOFF.lng,
           price: selected?.price ?? 150,
           vehicleType: selected?.id ?? 'ECONOMY',
-          pickupAddress: 'Maputo, Centro',
-          dropoffAddress: destination || 'Maputo, Destino',
+          pickupAddress: `${GEO_CONFIG.displayName}, Centro`,
+          dropoffAddress: destination || `${GEO_CONFIG.displayName}, Destino`,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -132,8 +140,8 @@ export default function RideMapClient() {
     <div className="h-screen w-screen relative bg-white overflow-hidden">
       <Map
         initialViewState={{
-          longitude: MAPUTO.lng,
-          latitude: MAPUTO.lat,
+          longitude: DEFAULT_PICKUP.lng,
+          latitude: DEFAULT_PICKUP.lat,
           zoom: 13,
         }}
         style={{ width: '100%', height: '100%' }}

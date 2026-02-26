@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useDriverStore, useRideState } from '@/store/driverStore';
 import { formatCurrencyMZN } from '@/lib/localization/mozambique';
 import { t, toggleLanguage } from '@/lib/i18n';
+import { getGeoConfig, generateSimulatedRideCoordinates } from '@/config/geo';
 
 /**
  * HomeScreen (OFFLINE/ONLINE)
@@ -37,17 +38,20 @@ export default function HomeScreen() {
 
   // Mock ride offer for demo
   const handleMockOffer = () => {
+    const geoConfig = getGeoConfig();
+    const { pickup, dropoff } = generateSimulatedRideCoordinates();
+    
     receiveOffer({
       id: `ride-${Date.now()}`,
       riderId: 'rider-123',
       riderName: 'João Silva',
       riderRating: 4.9,
-      pickupLat: -25.965,
-      pickupLon: 32.587,
-      pickupAddress: 'Avenida Julius Nyerere, Maputo',
-      dropoffLat: -25.973,
-      dropoffLon: 32.599,
-      dropoffAddress: 'Rua de Moçambique, Catembe',
+      pickupLat: pickup.lat,
+      pickupLon: pickup.lng,
+      pickupAddress: `Avenida Principal, ${geoConfig.displayName}`,
+      dropoffLat: dropoff.lat,
+      dropoffLon: dropoff.lng,
+      dropoffAddress: `Rua Central, ${geoConfig.displayName}`,
       estimatedFareMZN: 350,
       estimatedDurationMin: 15,
       estimatedDistanceKm: 8.5,

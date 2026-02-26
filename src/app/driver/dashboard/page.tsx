@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { formatCurrencyMZN } from '@/lib/localization/mozambique';
 import LogoutButton from '@/components/LogoutButton';
+import { getGeoConfig } from '@/config/geo';
 
 type PendingRide = {
   id: string;
@@ -196,14 +197,15 @@ export default function DriverDashboardPage() {
     if (!user || toggling) return;
     setToggling(true);
     try {
+      const geoConfig = getGeoConfig();
       const res = await fetch('/api/driver/go-online', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           authId: user.id,
           isOnline: !profile?.isOnline,
-          lat: -25.9692,
-          lng: 32.5732,
+          lat: geoConfig.centerCoordinates.lat,
+          lng: geoConfig.centerCoordinates.lng,
         }),
       });
       if (res.ok) {
